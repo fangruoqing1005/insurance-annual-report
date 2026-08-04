@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>保险公司年报分析工作台</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ============ 顶部导航栏 ============ */
+    .top-bar {
+      height: 56px;
+      background: linear-gradient(135deg, #C8102E 0%, #a00d24 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
+      z-index: 100;
+      position: relative;
+    }
+
+    .top-bar-title {
+      font-size: 18px;
+      font-weight: 600;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-bar-title i {
+      font-size: 22px;
+    }
+
+    .top-bar-subtitle {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-left: 16px;
+      padding-left: 16px;
+      border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* ============ 主布局 ============ */
+    .main-layout {
+      display: flex;
+      height: calc(100vh - 56px);
+    }
+
+    /* ============ 左侧导航 ============ */
+    .sidebar {
+      width: 200px;
+      background: #fff;
+      border-right: 1px solid #e8e8e8;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding-top: 12px;
+    }
+
+    .nav-section {
+      margin-bottom: 8px;
+    }
+
+    .nav-section-title {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-section-title i {
+      font-size: 14px;
+      color: #C8102E;
+    }
+
+    .nav-sub-items {
+      padding: 0 8px;
+    }
+
+    .nav-sub-item {
+      padding: 10px 16px 10px 32px;
+      font-size: 14px;
+      color: #555;
+      cursor: pointer;
+      border-radius: 6px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .nav-sub-item i {
+      font-size: 13px;
+      width: 16px;
+      text-align: center;
+    }
+
+    .nav-sub-item:hover {
+      background: #fff5f5;
+      color: #C8102E;
+    }
+
+    .nav-sub-item.active {
+      background: #C8102E;
+      color: white;
+      font-weight: 500;
+    }
+
+    .nav-sub-item.active i {
+      color: white;
+    }
+
+    /* ============ 右侧主内容 ============ */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ============ 筛选栏 ============ */
+    .filter-bar {
+      background: #fff;
+      padding: 12px 24px;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-item label {
+      font-size: 13px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .filter-item select {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #333;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+      min-width: 140px;
+      transition: border-color 0.2s;
+    }
+
+    .filter-item select:hover {
+      border-color: #C8102E;
+    }
+
+    .filter-item select:focus {
+      border-color: #C8102E;
+      box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.1);
+    }
+
+    .filter-confirm-btn {
+      padding: 6px 20px;
+      background: #C8102E;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .filter-confirm-btn:hover {
+      background: #a00d24;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(200, 16, 46, 0.3);
+    }
+
+    /* ============ 图表内容区 ============ */
+    .chart-content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+      transition: box-shadow 0.3s;
+    }
+
+    .chart-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-card-header {
+      padding: 14px 20px 8px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .chart-card-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chart-card-header h3::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: #C8102E;
+      border-radius: 2px;
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 320px;
+      padding: 8px 12px;
+    }
+
+    .chart-annotation {
+      padding: 8px 20px 12px;
+      font-size: 12px;
+      color: #999;
+      line-height: 1.5;
+      border-top: 1px solid #f5f5f5;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 80px 20px;
+      color: #999;
+      font-size: 15px;
+    }
+
+    .no-data i {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    /* ============ 滚动条样式 ============ */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C8102E;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* ============ 响应式 ============ */
+    @media (max-width: 1200px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 160px; }
+      .top-bar-subtitle { display: none; }
+      .filter-bar { padding: 8px 12px; gap: 8px; }
+      .filter-item select { min-width: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航栏 -->
+  <div class="top-bar">
+    <div class="top-bar-title">
+      <i class="fas fa-chart-pie"></i>
+      <span>保险公司年报分析工作台</span>
+    </div>
+    <div class="top-bar-subtitle">基于新会计准则（IFRS 17）寿险业</div>
+  </div>
+
+  <!-- 主布局 -->
+  <div class="main-layout">
+    <!-- 左侧导航 -->
+    <div class="sidebar">
+      <div id="sidebar-nav"></div>
+    </div>
+
+    <!-- 右侧主内容 -->
+    <div class="main-content">
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <div class="filter-item">
+          <label>公司类型</label>
+          <select id="type-select">
+            <option value="">全部类型</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>公司</label>
+          <select id="company-select">
+            <option value="">请选择公司</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>报告期</label>
+          <select id="period-select">
+            <option value="">请选择报告期</option>
+          </select>
+        </div>
+        <button class="filter-confirm-btn" onclick="applyFilters()">确认查询</button>
+      </div>
+
+      <!-- 图表内容 -->
+      <div class="chart-content-wrapper">
+        <div id="chart-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 文件 -->
+  <script src="data.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
