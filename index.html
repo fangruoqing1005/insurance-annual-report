@@ -30,12 +30,12 @@
   --c-up: #B83A3A;
   --c-down: #2D7D5E;
   --c-chart-1: #2B4C6F;
-  --c-chart-2: #5A7A99;
-  --c-chart-3: #C1954C;
-  --c-chart-4: #D4B47A;
-  --c-chart-5: #7A8B7E;
-  --c-chart-6: #9B8AA0;
-  --c-chart-7: #A67C52;
+  --c-chart-2: #C1954C;
+  --c-chart-3: #B84A4A;
+  --c-chart-4: #4A8A5C;
+  --c-chart-5: #7A5CA8;
+  --c-chart-6: #D97B3A;
+  --c-chart-7: #3A9AA8;
   --sidebar-bg: #1E293B;
   --sidebar-active: #2B4C6F;
   --sidebar-hover: #334155;
@@ -60,12 +60,12 @@
   --c-up: #B33A3A;
   --c-down: #2D7D5E;
   --c-chart-1: #B33A3A;
-  --c-chart-2: #D87B5C;
-  --c-chart-3: #D4A24C;
-  --c-chart-4: #8E2828;
-  --c-chart-5: #C68B6B;
-  --c-chart-6: #6B3A3A;
-  --c-chart-7: #E2B080;
+  --c-chart-2: #D4A24C;
+  --c-chart-3: #2B6F9E;
+  --c-chart-4: #4A8A5C;
+  --c-chart-5: #7A5CA8;
+  --c-chart-6: #C05C8A;
+  --c-chart-7: #3A9AA8;
   --sidebar-bg: #2B1A1A;
   --sidebar-active: #8E2828;
   --sidebar-hover: #3D2424;
@@ -78,27 +78,27 @@
   --c-bg: #F4F4F2;
   --c-surface: #FFFFFF;
   --c-border: #DDDDD8;
-  --c-border-light: #E8E8E4;
-  --c-text-primary: #1F1F1F;
-  --c-text-secondary: #5C5C5C;
-  --c-text-muted: #8C8C8C;
+  --c-border-light: #EBEAE6;
+  --c-text-primary: #1A1A1A;
+  --c-text-secondary: #666666;
+  --c-text-muted: #999999;
   --c-navy: #3C3C3C;
-  --c-navy-light: #E8E8E8;
-  --c-navy-dark: #1F1F1F;
+  --c-navy-light: #ECECEC;
+  --c-navy-dark: #262626;
   --c-gold: #8C7853;
-  --c-gold-light: #EFEAE0;
-  --c-up: #B83A3A;
-  --c-down: #2D7D5E;
+  --c-gold-light: #F0ECE4;
+  --c-up: #A85050;
+  --c-down: #4A7A5C;
   --c-chart-1: #3C3C3C;
-  --c-chart-2: #6B6B6B;
-  --c-chart-3: #8C7853;
-  --c-chart-4: #A89878;
-  --c-chart-5: #5C5C5C;
-  --c-chart-6: #BCA580;
-  --c-chart-7: #444444;
+  --c-chart-2: #8C7853;
+  --c-chart-3: #A85050;
+  --c-chart-4: #4A7A5C;
+  --c-chart-5: #6A5CA8;
+  --c-chart-6: #B07A3A;
+  --c-chart-7: #3A7A8A;
   --sidebar-bg: #2B2B2B;
   --sidebar-active: #3C3C3C;
-  --sidebar-hover: #383838;
+  --sidebar-hover: #3A3A3A;
   --sidebar-text: #D8D8D8;
   --sidebar-text-muted: #A8A8A8;
 }
@@ -120,12 +120,12 @@
   --c-up: #B83A3A;
   --c-down: #2D7D5E;
   --c-chart-1: #1E5A6B;
-  --c-chart-2: #3D8FA3;
-  --c-chart-3: #5BA88C;
-  --c-chart-4: #8FC0B0;
-  --c-chart-5: #2D6B7A;
-  --c-chart-6: #4DAA8E;
-  --c-chart-7: #1A4A5A;
+  --c-chart-2: #5BA88C;
+  --c-chart-3: #D4A24C;
+  --c-chart-4: #B84A5C;
+  --c-chart-5: #6A5CA8;
+  --c-chart-6: #3A8AB0;
+  --c-chart-7: #C07A3A;
   --sidebar-bg: #134251;
   --sidebar-active: #1E5A6B;
   --sidebar-hover: #1A4F60;
@@ -553,6 +553,14 @@ body {
 }
 .co-chip:hover { border-color: var(--c-navy); color: var(--c-navy); }
 .co-chip.selected { background: var(--c-navy); border-color: var(--c-navy); color: #fff; }
+.co-chip.has-data::after {
+  content: '●';
+  font-size: 8px;
+  margin-left: 4px;
+  color: var(--c-down);
+  vertical-align: 1px;
+}
+.co-chip.selected.has-data::after { color: #fff; }
 
 .selected-summary {
   background: var(--c-surface);
@@ -598,6 +606,9 @@ body {
   gap: 20px;
   align-content: start;
 }
+.main.single-col { grid-template-columns: 1fr; }
+/* 表格类卡片跨满整行（单列全宽），其余图表保持双列 */
+.main .chart-card.full-width { grid-column: 1 / -1; }
 
 /* ===== Chart Card ===== */
 .chart-card {
@@ -663,19 +674,6 @@ body {
   color: var(--c-text-primary);
   letter-spacing: 0.5px;
 }
-.chart-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  background: var(--c-navy-light);
-  color: var(--c-navy);
-  border-radius: 2px;
-  font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  margin-top: 4px;
-}
 .chart-annotation {
   font-size: 11px;
   color: var(--c-text-muted);
@@ -683,6 +681,152 @@ body {
   line-height: 1.4;
 }
 .chart-body { padding: 12px 12px 16px; height: 340px; }
+.chart-body.table-body { height: auto; padding: 8px 16px 16px; overflow-x: auto; }
+
+/* ===== Data Table ===== */
+.data-table-wrap { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.data-table th, .data-table td {
+  padding: 6px 10px;
+  border: 1px solid var(--c-border-light);
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.data-table th {
+  background: var(--c-navy-light);
+  color: var(--c-navy);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-weight: 500;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.data-table td.label {
+  text-align: left;
+  font-family: 'Noto Sans SC', sans-serif;
+  color: var(--c-text-primary);
+}
+.data-table tr:hover td { background: var(--c-bg); }
+.data-table .neg { color: var(--c-up); }
+.data-table .pos { color: var(--c-down); }
+.data-table .std-ok {
+  color: var(--c-down);
+  font-weight: 500;
+}
+.data-table .std-warn {
+  color: var(--c-up);
+  font-weight: 700;
+  background: #FDF0EF;
+}
+/* 表格列宽优化：折现率/置信水平等宽列 */
+.data-table.table-even {
+  table-layout: fixed;
+  width: 100%;
+}
+.data-table.table-even th,
+.data-table.table-even td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
+}
+.data-table.table-even th:first-child,
+.data-table.table-even td:first-child {
+  width: 32%;
+}
+/* 数据库表格列宽优化：窄列固定宽度，宽列（来源表等）允许换行 */
+.data-table.db-table th, .data-table.db-table td {
+  white-space: nowrap;
+  max-width: 320px;
+}
+.data-table.db-table td.wrap-cell {
+  white-space: normal;
+  word-break: break-all;
+  min-width: 140px;
+  max-width: 260px;
+  text-align: left;
+}
+.data-table.db-table td.col-code { min-width: 60px; text-align: center; }
+.data-table.db-table td.col-period { min-width: 52px; text-align: center; }
+.data-table.db-table td.col-num { min-width: 90px; }
+.data-table.db-table td.col-type { min-width: 70px; text-align: center; }
+.data-table.db-table td.col-name { min-width: 130px; text-align: left; }
+.data-table.db-table td.col-src { min-width: 200px; white-space: normal; word-break: break-all; text-align: left; }
+.data-table.db-table td.col-report { min-width: 80px; text-align: center; }
+.data-table.db-table td.col-std { min-width: 90px; text-align: center; }
+.data-table.db-table th.sticky-col { position: sticky; left: 0; z-index: 2; background: var(--c-navy-light); }
+.data-table.db-table td.sticky-col { position: sticky; left: 0; background: var(--c-surface); }
+.data-table.db-table tr:hover td.sticky-col { background: var(--c-bg); }
+
+/* ===== DB View ===== */
+.db-view { padding: 20px 28px; }
+.db-controls {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.db-controls select, .db-controls input[type="text"] {
+  padding: 5px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+  outline: none;
+}
+.db-controls select:focus, .db-controls input[type="text"]:focus { border-color: var(--c-navy); }
+.db-controls label { font-size: 12px; color: var(--c-text-secondary); white-space: nowrap; }
+.db-info {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  margin-bottom: 10px;
+}
+.db-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 16px;
+  overflow-x: auto;
+}
+.db-card .data-table th {
+  position: static;
+}
+.db-std-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.db-std-legend .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.db-std-legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.dot-std { background: #2D7D5E; }
+.dot-warn { background: #B83A3A; }
 
 .footer {
   padding: 20px 28px;
@@ -719,14 +863,18 @@ body {
         <i class="icon fa-solid fa-wand-magic-sparkles"></i><span>智能提取</span>
         <span class="badge">待开发</span>
       </div>
-      <div class="nav-item active">
+      <div class="nav-item" id="navDatabase">
+        <i class="icon fa-solid fa-database"></i><span>数据库</span>
+      </div>
+      <div class="nav-item active" id="navAnalysis">
         <i class="icon fa-solid fa-chart-line"></i><span>数据分析</span>
       </div>
-      <div class="nav-sub active" data-sub="key-report"><span>关键年报数据</span></div>
+      <div class="nav-sub active" data-sub="key-ops"><span>关键经营指标</span></div>
+      <div class="nav-sub" data-sub="profit-analysis"><span>利润分析</span></div>
       <div class="nav-sub" data-sub="insurance-service"><span>保险服务业绩</span></div>
       <div class="nav-sub" data-sub="investment-service"><span>投资服务业绩</span></div>
-      <div class="nav-sub" data-sub="profit-analysis"><span>利润分析</span></div>
-      <div class="nav-sub" data-sub="new-business"><span>新业务分析</span></div>
+      <div class="nav-sub" data-sub="key-monitor"><span>关键监测指标</span></div>
+      <div class="nav-sub" data-sub="disclosure"><span>其他披露信息</span></div>
       <div class="nav-item disabled" style="margin-top: 8px;">
         <i class="icon fa-solid fa-gear"></i><span>大模型设置</span>
         <span class="badge">待开发</span>
@@ -754,36 +902,36 @@ body {
             <div class="theme-option" data-theme="navy">
               <span class="theme-swatch">
                 <span style="background:#2B4C6F"></span>
-                <span style="background:#5A7A99"></span>
                 <span style="background:#C1954C"></span>
-                <span style="background:#D4B47A"></span>
+                <span style="background:#B84A4A"></span>
+                <span style="background:#4A8A5C"></span>
               </span>
               <span class="theme-label">商务藏青</span>
             </div>
             <div class="theme-option" data-theme="red">
               <span class="theme-swatch">
                 <span style="background:#B33A3A"></span>
-                <span style="background:#D87B5C"></span>
                 <span style="background:#D4A24C"></span>
-                <span style="background:#8E2828"></span>
+                <span style="background:#2B6F9E"></span>
+                <span style="background:#4A8A5C"></span>
               </span>
               <span class="theme-label">中国红</span>
             </div>
             <div class="theme-option" data-theme="gray">
               <span class="theme-swatch">
                 <span style="background:#3C3C3C"></span>
-                <span style="background:#6B6B6B"></span>
                 <span style="background:#8C7853"></span>
-                <span style="background:#A89878"></span>
+                <span style="background:#A85050"></span>
+                <span style="background:#4A7A5C"></span>
               </span>
               <span class="theme-label">高级灰</span>
             </div>
             <div class="theme-option" data-theme="ocean">
               <span class="theme-swatch">
                 <span style="background:#1E5A6B"></span>
-                <span style="background:#3D8FA3"></span>
                 <span style="background:#5BA88C"></span>
-                <span style="background:#8FC0B0"></span>
+                <span style="background:#D4A24C"></span>
+                <span style="background:#B84A5C"></span>
               </span>
               <span class="theme-label">海洋蓝绿</span>
             </div>
@@ -792,8 +940,8 @@ body {
       </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar">
+    <!-- Filter Bar (Analysis) -->
+    <div class="filter-bar" id="filterBar">
       <span class="filter-label">筛选：</span>
 
       <div class="dropdown" id="periodDropdown">
@@ -834,11 +982,11 @@ body {
           <div class="company-toolbar">
             <span>快捷操作：</span>
             <button class="toolbar-btn" data-action="select-head">头部险企</button>
-            <button class="toolbar-btn" data-action="select-mid">中型险企</button>
+            <button class="toolbar-btn" data-action="select-data">仅有数据</button>
             <button class="toolbar-btn" data-action="select-all">全选</button>
             <button class="toolbar-btn" data-action="invert">反选</button>
             <button class="toolbar-btn" data-action="clear">清空</button>
-            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;" id="companyStatus">已选 1 / 77</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;" id="companyStatus">已选 0 / 77</span>
           </div>
           <div class="panel-body" id="companyGroupList"></div>
         </div>
@@ -854,17 +1002,53 @@ body {
     </div>
 
     <!-- Selected summary -->
-    <div class="selected-summary">
+    <div class="selected-summary" id="selectedSummary">
       <span class="label">当前选择：</span>
       <div class="selected-chips" id="selectedChips"></div>
       <button class="btn-clear" id="btnClear" style="display:none;">清空全部</button>
     </div>
 
-    <!-- Main charts -->
+    <!-- Analysis Charts -->
     <div class="main" id="chartGrid"></div>
 
+    <!-- Database View -->
+    <div class="db-view" id="dbView" style="display:none;">
+      <div class="db-controls">
+        <label>公司：</label>
+        <select id="dbCompanyFilter">
+          <option value="">全部（8家）</option>
+        </select>
+        <label>指标编号：</label>
+        <input type="text" id="dbCodeFilter" placeholder="如 D10 / D10,D07" style="width:120px;">
+        <label>期间：</label>
+        <select id="dbPeriodFilter">
+          <option value="">全部</option>
+          <option value="本期">本期</option>
+          <option value="上期">上期</option>
+          <option value="期末">期末</option>
+          <option value="期初">期初</option>
+          <option value="年度">年度</option>
+        </select>
+        <label>报告期：</label>
+        <select id="dbReportPeriodFilter">
+          <!-- 选项由 initDbFilters 从数据库动态生成 -->
+        </select>
+        <label>关键词：</label>
+        <input type="text" id="dbKeywordFilter" placeholder="搜索指标名称/关键词" style="width:160px;">
+        <button class="btn-reset" id="dbReset">重置</button>
+      </div>
+      <div class="db-std-legend">
+        <span class="tag"><span class="dot dot-std"></span> 标准化为负值（已符合）</span>
+        <span class="tag"><span class="dot dot-warn"></span> 需标准化（当前为正，应转为负值）</span>
+      </div>
+      <div class="db-info" id="dbInfo"></div>
+      <div class="db-card">
+        <div id="dbTableContainer"></div>
+      </div>
+    </div>
+
     <div class="footer">
-      保险公司年报分析工作台 v0.7 · 数据来源：上市保险公司年报 · 仅供参考
+      保险公司年报分析工作台 v0.8 · 数据来源：上市保险公司年报 · 仅供参考
     </div>
   </div>
 </div>
@@ -874,9 +1058,18 @@ body {
 const COMPANY_TYPES = COMPANIES_DATA.types;
 const TYPE_RULES = COMPANIES_DATA.type_rules;
 const COMPANIES = COMPANIES_DATA.companies;
+// 报告期从数据库动态提取（保持数据中的原始顺序）
+const REPORT_PERIODS = [...new Set(RAW_DATA.map(r => r['报告期']))];
 
 const SHORT_TO_FULL = {};
 COMPANIES.forEach(c => { SHORT_TO_FULL[c.short_name] = c.full_name; });
+
+// 标准化说明（指标编号 → 标准化目标符号说明）
+const STD_NOTES = {
+  'B07': '信用减值损失', 'B08': '利息支出', 'B09': '其他资产减值',
+  'B10': '承保财务净损益', 'B12': '保险服务费用', 'D07': 'CSM摊销',
+  'C04': 'LC摊销', 'C13': 'LC摊销'
+};
 
 // ============== State ==============
 const state = {
@@ -885,8 +1078,23 @@ const state = {
   companies: ['中国人寿']
 };
 const appliedState = { periods: [], types: [], companies: [] };
-let currentSubPage = 'key-report';
+let currentSubPage = 'key-ops';
+let currentView = 'analysis'; // 'analysis' | 'database'
 let hasApplied = false;
+
+// ============== View Switch ==============
+function switchView(view) {
+  currentView = view;
+  const isDb = view === 'database';
+  document.getElementById('filterBar').style.display = isDb ? 'none' : 'flex';
+  document.getElementById('selectedSummary').style.display = isDb ? 'none' : 'flex';
+  document.getElementById('chartGrid').style.display = isDb ? 'none' : 'grid';
+  document.getElementById('dbView').style.display = isDb ? 'block' : 'none';
+  document.querySelectorAll('.nav-sub').forEach(n => n.style.display = isDb ? 'none' : '');
+  document.getElementById('navDatabase').classList.toggle('active', isDb);
+  document.getElementById('navAnalysis').classList.toggle('active', !isDb);
+  if (isDb) renderDatabase();
+}
 
 // ============== Dropdown Logic ==============
 function initDropdowns() {
@@ -910,9 +1118,8 @@ function initDropdowns() {
 
 // ============== Period Dropdown ==============
 function renderPeriodOptions() {
-  const periods = ['2025年度', '2024年度', '2023年度'];
   const container = document.getElementById('periodOptions');
-  container.innerHTML = periods.map(p => `
+  container.innerHTML = REPORT_PERIODS.map(p => `
     <div class="ms-option ${state.periods.includes(p) ? 'selected' : ''}" data-period="${p}">
       <span class="checkbox"></span>
       <span class="opt-label">${p}</span>
@@ -981,9 +1188,11 @@ function renderCompanyGroups(filter = '') {
           </div>
         </div>
         <div class="company-group-chips">
-          ${filtered.map(s => `
-            <div class="co-chip ${state.companies.includes(s) ? 'selected' : ''}" data-company="${s}">${s}</div>
-          `).join('')}
+          ${filtered.map(s => {
+            const c = COMPANIES.find(co => co.short_name === s);
+            const hasData = c && c.has_data;
+            return `<div class="co-chip ${state.companies.includes(s) ? 'selected' : ''} ${hasData ? 'has-data' : ''}" data-company="${s}" title="${hasData ? '该年度数据库中有数据' : '暂无数据'}">${s}</div>`;
+          }).join('')}
         </div>
       </div>
     `;
@@ -1025,9 +1234,8 @@ function renderCompanyToolbar() {
       if (action === 'select-head') {
         const head = TYPE_RULES['头部险企'].map(f => COMPANIES.find(c => c.full_name === f)?.short_name);
         head.forEach(s => { if (!state.companies.includes(s)) state.companies.push(s); });
-      } else if (action === 'select-mid') {
-        const mid = TYPE_RULES['中型险企'].map(f => COMPANIES.find(c => c.full_name === f)?.short_name);
-        mid.forEach(s => { if (!state.companies.includes(s)) state.companies.push(s); });
+      } else if (action === 'select-data') {
+        COMPANIES.filter(c => c.has_data).forEach(c => { if (!state.companies.includes(c.short_name)) state.companies.push(c.short_name); });
       } else if (action === 'select-all') {
         COMPANIES.forEach(c => { if (!state.companies.includes(c.short_name)) state.companies.push(c.short_name); });
       } else if (action === 'invert') {
@@ -1070,8 +1278,11 @@ function renderSelectedChips() {
 
 // ============== Sidebar Navigation ==============
 function initSidebar() {
+  document.getElementById('navDatabase').addEventListener('click', () => switchView('database'));
+  document.getElementById('navAnalysis').addEventListener('click', () => switchView('analysis'));
   document.querySelectorAll('.nav-sub').forEach(el => {
     el.addEventListener('click', () => {
+      switchView('analysis');
       currentSubPage = el.dataset.sub;
       document.querySelectorAll('.nav-sub').forEach(n => n.classList.remove('active'));
       el.classList.add('active');
@@ -1109,20 +1320,62 @@ function refreshThemeColors() {
 }
 
 // ============== Data Query ==============
-function getCompanyFullName(shortName) {
-  return SHORT_TO_FULL[shortName] || shortName;
-}
-
 function parseValue(val) {
   if (val === null || val === undefined || val === '') return null;
   const n = Number(val);
   return isNaN(n) ? null : n;
 }
 
+// 数值或文本统一取值：数字返回数字；有意义的文本（折现率区间/置信水平）返回字符串；
+// 无意义文本（未披露/不适用）返回 null
+function toVal(r) {
+  const v = r['数值-换算'];
+  if (typeof v === 'string' && v.trim() !== '') {
+    if (['未披露', '不适用', '—', '-', '无', 'N/A', 'NA'].includes(v.trim())) return null;
+    return v;
+  }
+  return parseValue(v);
+}
+
+// 期间匹配：兼容不同数据库的期间写法
+// 常规：本期/上期/期末/期初/年度；扩展：本期初/本期末/上期初/上期末；日期式：2025年12月31日
+// 注：部分公司 G 系列"期末/期初"期间行的来源列带"（本期末）/（上期末）"标注，需用来源区分
+function matchPeriod(r, periodType, reportPeriod) {
+  const p = String(r['期间'] || '');
+  const src = String(r['指标来源'] || '');
+  const yearMatch = String(reportPeriod || '').match(/(\d{4})/);
+  const yearStr = yearMatch ? yearMatch[1] : '';
+  const isDatePeriod = p.includes('月31日') || p.includes('月30日');
+  const isPrev = p.includes('上期') || p.includes('上期末') || p.includes('上期初') ||
+                 src.includes('上期') || (isDatePeriod && yearStr && !p.includes(yearStr));
+
+  if (periodType === '本期') {
+    return (p === '本期' || p === '本期初' || p === '本期末' || (isDatePeriod && p.includes(yearStr))) && !isPrev;
+  }
+  if (periodType === '上期') {
+    return p === '上期' || (isDatePeriod && yearStr && !p.includes(yearStr));
+  }
+  // 期末/本期末 互相兼容（期间"期末"行的来源可能标"（本期末）"）
+  if (periodType === '期末' || periodType === '本期末') {
+    return (p === '期末' || p === '本期末' || (isDatePeriod && p.includes(yearStr))) && !isPrev;
+  }
+  // 期初/本期初 互相兼容
+  if (periodType === '期初' || periodType === '本期初') {
+    return (p === '期初' || p === '本期初') && !isPrev;
+  }
+  if (periodType === '年度') {
+    return p === '年度';
+  }
+  if (periodType === '上期末') return p === '上期末';
+  if (periodType === '上期初') return p === '上期初';
+  return false;
+}
+
 function findRows(companyShort, reportPeriod, code) {
+  const dbName = DB_ALIAS[companyShort] || companyShort;
   const fullName = SHORT_TO_FULL[companyShort] || companyShort;
   return RAW_DATA.filter(r =>
-    (r['公司名称'] === companyShort || r['公司名称'] === fullName) &&
+    (r['公司名称'] === companyShort || r['公司名称'] === dbName || r['公司名称'] === fullName) &&
     r['报告期'] === reportPeriod &&
     r['指标编号'] === code
   );
@@ -1131,60 +1384,23 @@ function findRows(companyShort, reportPeriod, code) {
 function getValue(companyShort, code, periodType, reportPeriod) {
   const rows = findRows(companyShort, reportPeriod, code);
   if (!rows || rows.length === 0) return null;
+  let current = null;
 
-  let current = null, previous = null;
-
-  if (periodType === '本期') {
-    for (const r of rows) {
-      const src = String(r['指标来源'] || '');
-      const val = parseValue(r['数值-换算']);
-      if (r['期间'] === '本期' && src.indexOf('上期') === -1) current = val;
-      else if (r['期间'] === '上期') previous = val;
+  for (const r of rows) {
+    if (matchPeriod(r, periodType, reportPeriod)) {
+      current = toVal(r);
+      break;
     }
-    return current;
   }
-
-  if (periodType === '上期') {
-    for (const r of rows) {
-      if (r['期间'] === '上期') return parseValue(r['数值-换算']);
-    }
-    return null;
-  }
-
-  if (periodType === '期末') {
-    for (const r of rows) {
-      const src = String(r['指标来源'] || '');
-      const val = parseValue(r['数值-换算']);
-      if (r['期间'] === '期末') {
-        if (src.indexOf('上期末') !== -1) previous = val;
-        else if (src.indexOf('上期') === -1) current = val;
-      }
-    }
-    if (current === null) {
-      for (const r of rows) {
-        const src = String(r['指标来源'] || '');
-        if (r['期间'] === '本期' && src.indexOf('上期') === -1) current = parseValue(r['数值-换算']);
-      }
-    }
-    return current;
-  }
-
-  if (periodType === '期初') {
-    for (const r of rows) {
-      const src = String(r['指标来源'] || '');
-      if (r['期间'] === '期初' && src.indexOf('上期') === -1) return parseValue(r['数值-换算']);
-    }
-    return null;
-  }
-
-  return null;
+  return current;
 }
 
-function evalFormula(companyShort, formula, periodType, reportPeriod) {
+function evalFormula(companyShort, formula, periodType, reportPeriod, periodMap) {
   const codes = formula.match(/[A-Z]\d+/g) || [];
   const values = {};
   for (const code of codes) {
-    values[code] = getValue(companyShort, code, periodType, reportPeriod);
+    const p = (periodMap && periodMap[code]) || periodType;
+    values[code] = getValue(companyShort, code, p, reportPeriod);
   }
 
   let expr = formula;
@@ -1206,9 +1422,9 @@ function evalFormula(companyShort, formula, periodType, reportPeriod) {
   }
 }
 
-function getIndicatorValue(companyShort, indicator, periodType, reportPeriod) {
+function getIndicatorValue(companyShort, indicator, periodType, reportPeriod, periodMap) {
   if (/[\+\-\*\/\(\)]/.test(indicator) && /[A-Z]\d+/.test(indicator)) {
-    return evalFormula(companyShort, indicator, periodType, reportPeriod);
+    return evalFormula(companyShort, indicator, periodType, reportPeriod, periodMap);
   }
   return getValue(companyShort, indicator, periodType, reportPeriod);
 }
@@ -1219,14 +1435,22 @@ function formatValue(v, formatter) {
   return v;
 }
 
-function filterChartData(config, companyShorts, reportPeriod) {
-  return companyShorts.map(shortName => {
-    const values = {};
-    config.indicators.forEach(indicator => {
-      values[indicator] = getIndicatorValue(shortName, indicator, config.period, reportPeriod);
+// 取数：公司 × 报告期 组合，保证多报告期时每个组合独立一个数据点
+// 优先顺序：先区分公司，同一公司再按报告期排列
+function filterChartData(config, companyShorts, reportPeriods) {
+  const points = [];
+  const periods = (reportPeriods && reportPeriods.length) ? reportPeriods : ['2025年度'];
+  companyShorts.forEach(shortName => {
+    periods.forEach(rp => {
+      const values = {};
+      config.indicators.forEach((indicator, i) => {
+        const period = (config.periods && config.periods[i]) || config.period;
+        values[indicator] = getIndicatorValue(shortName, indicator, period, rp, config.periodMap);
+      });
+      points.push({ company: shortName, reportPeriod: rp, values });
     });
-    return { company: shortName, values };
   });
+  return points;
 }
 
 // ============== Chart Renderer ==============
@@ -1240,16 +1464,21 @@ function TOOLTIP_BASE() {
   };
 }
 
+function getValueFormatter(config, idx) {
+  if (Array.isArray(config.valueFormatter)) return config.valueFormatter[idx] || null;
+  return config.valueFormatter || null;
+}
+
 function buildSeries(config, data) {
   const series = [];
-  const formatter = config.valueFormatter;
 
   if (config.chartType === 'line') {
     config.indicators.forEach((ind, idx) => {
       series.push({
         name: config.displayNames[idx],
         type: 'line',
-        data: data.map(d => formatValue(d.values[ind], formatter)),
+        // data 保留原始数值，tooltip/坐标轴负责格式化显示
+        data: data.map(d => d.values[ind]),
         symbolSize: 6,
         lineStyle: { width: 2 }
       });
@@ -1260,7 +1489,7 @@ function buildSeries(config, data) {
         name: config.displayNames[idx],
         type: 'bar',
         stack: 'total',
-        data: data.map(d => formatValue(d.values[ind], formatter))
+        data: data.map(d => d.values[ind])
       });
     });
   } else {
@@ -1268,17 +1497,230 @@ function buildSeries(config, data) {
       series.push({
         name: config.displayNames[idx],
         type: 'bar',
-        data: data.map(d => formatValue(d.values[ind], formatter))
+        data: data.map(d => d.values[ind])
       });
     });
   }
   return series;
 }
 
-function getYAxis(config) {
+// 统一 tooltip 数值格式化：两位小数
+function tooltipValueFormatter(config) {
+  return (value) => {
+    if (value === null || value === undefined || value === '') return '—';
+    const num = Number(value);
+    if (!isFinite(num)) return String(value);
+    if (config.unit === '%') return (num * 100).toFixed(2) + '%';
+    return num.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  };
+}
+
+// 堆叠柱状图 tooltip：各项 + 合计
+function stackedTooltipFormatter(config) {
+  const fmt = tooltipValueFormatter(config);
+  return (params) => {
+    if (!Array.isArray(params)) params = [params];
+    let total = 0;
+    let html = '';
+    params.forEach(p => {
+      const v = p.value;
+      if (v !== null && v !== undefined && isFinite(Number(v))) total += Number(v);
+      html += `${p.marker}${p.seriesName}：${fmt(v)}<br/>`;
+    });
+    const totalStr = config.unit === '%'
+      ? (total * 100).toFixed(2) + '%'
+      : total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    html += `<div style="border-top:1px solid #E8E8E8;margin-top:4px;padding-top:4px;font-weight:700;color:#1A1A1A;">合计：${totalStr}</div>`;
+    return html;
+  };
+}
+
+// ===== 瀑布图（逐公司） =====
+// 为单个公司生成瀑布图 option
+function buildWaterfallOption(config, companyData) {
+  const cats = config.displayNames;
+  const n = cats.length;
+  const vals = config.indicators.map((ind, i) => companyData.values[ind]);
+  const base = new Array(n).fill(null);
+  const barData = new Array(n).fill(null);
+  let acc = 0;
+  vals.forEach((v, i) => {
+    if (v === null || v === undefined) return;
+    if (i === 0) {
+      barData[i] = v;
+      acc = v;
+    } else if (i === n - 1) {
+      barData[i] = v;
+    } else {
+      base[i] = i === 1 ? 0 : acc;
+      barData[i] = v;
+      acc += v;
+    }
+  });
+
+  return {
+    color: COLORS,
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: '#FFFFFF',
+      borderColor: COLORS.border,
+      textStyle: { color: COLORS.textPrimary, fontSize: 12, fontFamily: 'Noto Sans SC' },
+      formatter: (p) => {
+        const i = p.dataIndex;
+        const v = vals[i];
+        if (v === null || v === undefined) return cats[i] + '：—';
+        return `${cats[i]}：${v >= 0 && i !== 0 && i !== n - 1 ? '+' : ''}${fmtNum(v)}`;
+      }
+    },
+    grid: { left: 60, right: 30, top: 24, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: cats,
+      axisLabel: { fontSize: 10, color: COLORS.textSecondary, rotate: 30 }
+    },
+    yAxis: { type: 'value', name: config.unit || '亿元', nameTextStyle: { fontSize: 10, color: COLORS.textMuted }, axisLabel: { fontSize: 10 } },
+    series: [
+      {
+        name: '底柱',
+        type: 'bar',
+        stack: 'wf',
+        data: base,
+        itemStyle: { color: 'transparent' },
+        tooltip: { show: false },
+        silent: true
+      },
+      {
+        name: companyData.company,
+        type: 'bar',
+        stack: 'wf',
+        data: barData,
+        label: {
+          show: true,
+          position: 'top',
+          fontSize: 10,
+          color: COLORS.textSecondary,
+          formatter: p => {
+            const i = p.dataIndex;
+            const v = vals[i];
+            if (v === null || v === undefined) return '';
+            if (i === 0 || i === n - 1) return fmtNum(v);
+            return (v >= 0 ? '+' : '') + fmtNum(v);
+          }
+        },
+        itemStyle: { color: (p) => {
+          const v = vals[p.dataIndex];
+          if (v === null || v === undefined) return 'transparent';
+          if (p.dataIndex === 0 || p.dataIndex === n - 1) return COLORS[0];
+          return v >= 0 ? COLORS[2] : COLORS.up;
+        } }
+      }
+    ]
+  };
+}
+
+function fmtNum(v) {
+  if (v === null || v === undefined || !isFinite(v)) return '';
+  if (Math.abs(v) >= 10000) return (v / 10000).toFixed(2) + '万';
+  return v.toFixed(2);
+}
+
+// ===== 组合图（柱+线，双轴） =====
+function buildBarLine(config, data) {
+  const series = [];
+  config.indicators.forEach((ind, idx) => {
+    const isLine = idx === config.indicators.length - 1;
+    series.push({
+      name: config.displayNames[idx],
+      type: isLine ? 'line' : 'bar',
+      yAxisIndex: isLine ? 1 : 0,
+      data: data.map(d => d.values[ind]),
+      symbolSize: 6,
+      ...(isLine ? { lineStyle: { width: 2 } } : {})
+    });
+  });
+  return series;
+}
+
+// ===== 表格 =====
+function fmtTableNum(v, config, idx) {
+  if (typeof v === 'string') return v;
+  const num = Number(v);
+  if (config.unit === '%' && getValueFormatter(config, idx)) {
+    return getValueFormatter(config, idx)(num);
+  }
+  return num.toLocaleString('zh-CN', {maximumFractionDigits: 2});
+}
+
+function renderTableChart(config, data, container) {
+  // 多报告期时行/列标签带报告期
+  const multiPeriod = appliedState.periods && appliedState.periods.length > 1;
+  const labelOf = d => multiPeriod ? (d.company + '\n' + d.reportPeriod) : d.company;
+
+  if (config.tableTranspose) {
+    // 转置：公司（×报告期）为行，指标为列
+    const headerCells = config.displayNames.map((name, i) => {
+      const ind = config.indicators[i];
+      return `<th>${name}${ind ? `<div style="font-size:9px;font-family:JetBrains Mono,monospace;font-weight:400;color:var(--c-text-muted);">${ind}</div>` : ''}</th>`;
+    }).join('');
+    const bodyRows = data.map(d => {
+      const cells = config.indicators.map((ind, i) => {
+        const v = d.values[ind];
+        if (v === null || v === undefined) return '<td style="color:var(--c-text-muted);">—</td>';
+        const num = Number(v);
+        const cls = num < 0 ? 'neg' : (num > 0 ? 'pos' : '');
+        return `<td class="${cls}">${fmtTableNum(v, config, i)}</td>`;
+      });
+      const rowLabel = multiPeriod
+        ? `<td class="label" style="white-space:normal;">${d.company}<div style="font-size:10px;color:var(--c-text-muted);font-family:JetBrains Mono,monospace;">${d.reportPeriod}</div></td>`
+        : `<td class="label">${d.company}</td>`;
+      return `<tr>${rowLabel}${cells.join('')}</tr>`;
+    }).join('');
+    container.innerHTML = `
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>公司${multiPeriod ? ' / 报告期' : ''}</th>${headerCells}</tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
+    `;
+    return;
+  }
+  const rowsHtml = config.displayNames.map((name, i) => {
+    const ind = config.indicators[i];
+    const cells = data.map(d => {
+      const v = d.values[ind];
+      if (v === null || v === undefined) return '<td style="color:var(--c-text-muted);">—</td>';
+      if (typeof v === 'string') return `<td>${v}</td>`;
+      const num = Number(v);
+      const cls = num < 0 ? 'neg' : (num > 0 ? 'pos' : '');
+      return `<td class="${cls}">${fmtTableNum(v, config, i)}</td>`;
+    });
+    return `<tr><td class="label">${name}</td>${cells.join('')}</tr>`;
+  }).join('');
+  // 折现率/置信水平等单指标表格：等宽列（table-even），第一列指标名稍宽
+  const evenCls = config.indicators.length === 1 ? 'data-table table-even' : 'data-table';
+  container.innerHTML = `
+    <div class="data-table-wrap">
+      <table class="${evenCls}">
+        <thead><tr><th>指标</th>${data.map(d => `<th>${labelOf(d).replace(/\n/g, '<br/>')}</th>`).join('')}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function getYAxis(config, withPctAxis) {
   const unit = config.unit || '亿元';
+  // data 为原始小数（如 0.1389），% 轴刻度显示需 ×100
+  const pctLabel = { formatter: v => (v * 100).toFixed(1) + '%' };
+  if (withPctAxis) {
+    return [
+      { type: 'value', name: '亿元', nameTextStyle: { fontSize: 10, color: COLORS.textMuted }, axisLabel: { fontSize: 10 } },
+      { type: 'value', name: '%', nameTextStyle: { fontSize: 10, color: COLORS.textMuted }, axisLabel: { fontSize: 10, ...pctLabel }, splitLine: { show: false } }
+    ];
+  }
   if (unit === '%') {
-    return [{ type: 'value', name: unit, axisLabel: { formatter: '{value}%' } }];
+    return [{ type: 'value', name: unit, axisLabel: { fontSize: 10, ...pctLabel } }];
   }
   return [{ type: 'value', name: unit }];
 }
@@ -1287,8 +1729,21 @@ function renderChart(config) {
   const el = document.getElementById(config.id);
   if (!el) return;
 
-  const reportPeriod = appliedState.periods[0] || '2025年度';
-  const data = filterChartData(config, appliedState.companies, reportPeriod);
+  const reportPeriods = (appliedState.periods && appliedState.periods.length) ? appliedState.periods : ['2025年度'];
+
+  // 表格类型
+  if (config.chartType === 'table') {
+    const data = filterChartData(config, appliedState.companies, reportPeriods);
+    const hasData = data.some(d => config.indicators.some(ind => d.values[ind] !== null));
+    if (!hasData) {
+      renderEmpty(config.id);
+      return;
+    }
+    renderTableChart(config, data, el);
+    return;
+  }
+
+  const data = filterChartData(config, appliedState.companies, reportPeriods);
   const hasData = data.some(d => config.indicators.some(ind => d.values[ind] !== null));
 
   if (!hasData) {
@@ -1296,37 +1751,72 @@ function renderChart(config) {
     return;
   }
 
+  // ===== 瀑布图：逐公司逐报告期渲染独立瀑布 =====
+  if (config.chartType === 'waterfall') {
+    renderWaterfallChart(config, data, el);
+    return;
+  }
+
   const existing = echarts.getInstanceByDom(el);
   if (existing) existing.dispose();
 
   const chart = echarts.init(el);
-  const series = buildSeries(config, data);
-  const yAxis = getYAxis(config);
+  // 堆叠柱状图：tooltip 显示各项 + 合计
+  const tooltip = config.chartType === 'stackedBar'
+    ? Object.assign({}, TOOLTIP_BASE(), { formatter: stackedTooltipFormatter(config) })
+    : Object.assign({}, TOOLTIP_BASE(), { valueFormatter: tooltipValueFormatter(config) });
 
-  const tooltip = Object.assign({}, TOOLTIP_BASE());
+  // x 轴：先区分公司，同一公司多报告期并排；多报告期时标签带报告期
+  const multiPeriod = reportPeriods.length > 1;
+  const xLabel = d => multiPeriod ? (d.company + '\n' + d.reportPeriod) : d.company;
+  const xData = data.map(d => xLabel(d));
+  const legendData = config.displayNames.slice();
+  const textStyle = { fontSize: 11, color: COLORS.textPrimary };
 
-  chart.setOption({
-    color: COLORS,
-    tooltip,
-    legend: {
-      data: series.map(s => s.name),
-      top: 4,
-      itemGap: 18,
-      textStyle: { fontSize: 11, color: COLORS.textPrimary }
-    },
-    grid: { left: 50, right: 40, top: 40, bottom: 30 },
-    xAxis: {
-      type: 'category',
-      data: data.map(d => d.company),
-      axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: data.length > 6 ? 25 : 0 }
-    },
-    yAxis: yAxis.map(y => ({
-      ...y,
-      nameTextStyle: { fontSize: 10, color: COLORS.textMuted },
-      axisLabel: { fontSize: 10, ...(y.axisLabel || {}) }
-    })),
-    series
-  });
+  // legend 位置：默认顶部；legendBottom 时放底部（避免与 y 轴单位"亿元"重叠）
+  // 4 项 legend 文字较长会自动换行，需要给底部留够 2 行 legend + x 轴公司名 + 余量
+  let legend, gridBase;
+  if (config.legendBottom) {
+    // legend 高度预估：每行 legend 行高约 22px（长文本），4 项约 44px，2 行则 ~66px（含 padding）
+    legend = { data: legendData, bottom: 4, left: 'center', itemGap: 22, itemHeight: 16, padding: [0, 10, 4, 10], textStyle };
+    gridBase = { left: 60, top: 50, bottom: 90 };
+  } else {
+    const legendTop = config.legendTop || 4;
+    legend = { data: legendData, top: legendTop, itemGap: 18, textStyle };
+    gridBase = { left: 60, top: legendTop + 36, bottom: 30 };
+  }
+
+  let option;
+
+  if (config.chartType === 'barLine') {
+    const series = buildBarLine(config, data);
+    option = {
+      color: COLORS,
+      tooltip,
+      legend,
+      grid: { ...gridBase, right: 60 },
+      xAxis: { type: 'category', data: xData, axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: xData.length > 6 ? 25 : 0 } },
+      yAxis: getYAxis(config, true),
+      series
+    };
+  } else {
+    const series = buildSeries(config, data);
+    option = {
+      color: COLORS,
+      tooltip,
+      legend,
+      grid: { ...gridBase, right: 40 },
+      xAxis: { type: 'category', data: xData, axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: xData.length > 6 ? 25 : 0 } },
+      yAxis: getYAxis(config, false).map(y => ({
+        ...y,
+        nameTextStyle: { fontSize: 10, color: COLORS.textMuted },
+        axisLabel: { fontSize: 10, ...(y.axisLabel || {}) }
+      })),
+      series
+    };
+  }
+
+  chart.setOption(option);
 
   if (!el._resizeBound) {
     window.addEventListener('resize', function() {
@@ -1334,6 +1824,53 @@ function renderChart(config) {
       if (inst) inst.resize();
     });
     el._resizeBound = true;
+  }
+}
+
+// 瀑布图：每家公司×报告期渲染一个独立小瀑布图（垂直排列）
+function renderWaterfallChart(config, data, container) {
+  // 清除旧实例
+  if (container._wfInstances) {
+    container._wfInstances.forEach(inst => { try { inst.dispose(); } catch(e) {} });
+  }
+  container.innerHTML = '';
+  container._wfInstances = [];
+
+  const validData = data.filter(d => config.indicators.some(ind => d.values[ind] !== null));
+  if (validData.length === 0) {
+    renderEmpty(config.id);
+    return;
+  }
+
+  // 卡片高度自适应（每公司×报告期一个 230px 瀑布块）
+  const body = container.closest('.chart-body');
+  if (body) body.style.height = (validData.length * 230 + 40) + 'px';
+  const blockHeight = 230;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:14px;';
+
+  const multiPeriod = appliedState.periods && appliedState.periods.length > 1;
+  validData.forEach(d => {
+    const title = multiPeriod ? `${d.company}（${d.reportPeriod}）` : d.company;
+    const sub = document.createElement('div');
+    sub.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--c-navy);margin-bottom:4px;">${title}</div>
+                     <div style="width:100%;height:${blockHeight - 30}px;"></div>`;
+    wrap.appendChild(sub);
+    const chartEl = sub.querySelector('div:last-child');
+    const inst = echarts.init(chartEl);
+    inst.setOption(buildWaterfallOption(config, d));
+    // 渲染后强制重算尺寸，避免容器未布局导致显示异常
+    setTimeout(() => { try { inst.resize(); } catch(e) {} }, 30);
+    container._wfInstances.push(inst);
+  });
+
+  container.appendChild(wrap);
+
+  if (!container._wfResizeBound) {
+    container._wfResizeBound = true;
+    window.addEventListener('resize', () => {
+      container._wfInstances.forEach(inst => inst.resize());
+    });
   }
 }
 
@@ -1351,34 +1888,43 @@ function buildChartCards() {
   if (!container) return;
 
   const specs = CHART_CONFIGS.filter(c => c.subPage === currentSubPage);
+  // 表格类卡片跨满整行（单列全宽），其余图表保持双列
+  container.classList.remove('single-col');
+
   container.innerHTML = specs.map(spec => {
-    const tagHtml = spec.tag ? `<div class="chart-tag">${spec.tag}</div>` : '';
     const annotationHtml = spec.annotation ? `<div class="chart-annotation">${spec.annotation}</div>` : '';
-    return [
-      '<div class="chart-card">',
-      '  <div class="chart-header">',
-      '    <div>',
-      '      <div class="chart-title">' + spec.title + '</div>',
-      tagHtml,
-      annotationHtml,
-      '    </div>',
-      '    <div class="chart-header-right">',
-      '      <div class="chart-export-wrap">',
-      '        <button class="chart-export-btn" data-chart="' + spec.id + '" title="导出图表">',
-      '          <i class="fa-solid fa-download"></i>',
-      '        </button>',
-      '        <div class="export-menu">',
-      '          <div class="export-menu-item" data-action="png" data-chart="' + spec.id + '">',
-      '            <i class="fa-regular fa-image"></i>下载为 PNG',
-      '          </div>',
-      '          <div class="export-menu-item" data-action="copy" data-chart="' + spec.id + '">',
-      '            <i class="fa-regular fa-copy"></i>复制到剪贴板',
-      '          </div>',
-      '        </div>',
+    const bodyCls = spec.chartType === 'table' ? 'chart-body table-body' : 'chart-body';
+    const cardCls = spec.chartType === 'table' ? 'chart-card full-width' : 'chart-card';
+    // 表格类型不支持图片导出，不显示导出按钮
+    const exportHtml = spec.chartType === 'table' ? '' : [
+      '<div class="chart-header-right">',
+      '  <div class="chart-export-wrap">',
+      '    <button class="chart-export-btn" data-chart="' + spec.id + '" title="导出图表">',
+      '      <i class="fa-solid fa-download"></i>',
+      '    </button>',
+      '    <div class="export-menu">',
+      '      <div class="export-menu-item" data-action="png" data-chart="' + spec.id + '">',
+      '        <i class="fa-regular fa-image"></i>下载为 PNG',
+      '      </div>',
+      '      <div class="export-menu-item" data-action="copy" data-chart="' + spec.id + '">',
+      '        <i class="fa-regular fa-copy"></i>复制到剪贴板',
       '      </div>',
       '    </div>',
       '  </div>',
-      '  <div class="chart-body"><div id="' + spec.id + '" style="width:100%;height:100%;"></div></div>',
+      '</div>'
+    ].join('\n');
+    // 部分图表需要更高画幅（legend 换行等），用 spec.bodyHeight 覆盖
+    const bodyStyle = spec.bodyHeight ? `style="height:${spec.bodyHeight}px;"` : '';
+    return [
+      '<div class="' + cardCls + '">',
+      '  <div class="chart-header">',
+      '    <div>',
+      '      <div class="chart-title">' + spec.title + '</div>',
+      annotationHtml,
+      '    </div>',
+      exportHtml,
+      '  </div>',
+      '  <div class="' + bodyCls + '" ' + bodyStyle + '><div id="' + spec.id + '" style="width:100%;height:100%;"></div></div>',
       '</div>'
     ].join('\n');
   }).join('\n');
@@ -1388,6 +1934,122 @@ function renderCharts() {
   refreshThemeColors();
   const specs = CHART_CONFIGS.filter(c => c.subPage === currentSubPage);
   specs.forEach(spec => renderChart(spec));
+}
+
+// ============== Database View ==============
+const DB_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '期间', '数值-换算', '数值-披露', '来源表', '标准化'];
+
+function initDbFilters() {
+  const companySelect = document.getElementById('dbCompanyFilter');
+  const dbCompanies = [...new Set(RAW_DATA.map(r => r['公司名称']))];
+  companySelect.innerHTML = '<option value="">全部（' + dbCompanies.length + '家）</option>' +
+    dbCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // 报告期下拉动态生成
+  const rpSelect = document.getElementById('dbReportPeriodFilter');
+  const dbPeriods = [...new Set(RAW_DATA.map(r => r['报告期']))];
+  rpSelect.innerHTML = dbPeriods.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function getStdStatus(code, value) {
+  if (!NEGATIVE_INDICATORS.includes(code)) return {type: 'none', note: ''};
+  if (value === null || value === undefined || value === '') return {type: 'none', note: '负值'};
+  if (typeof value === 'string') {
+    const n = parseFloat(value.replace(/[%,%~]/g, ''));
+    if (isNaN(n)) return {type: 'none', note: ''};
+    return n < 0 ? {type: 'ok', note: '负值✓'} : {type: 'warn', note: '需标准化→负值'};
+  }
+  const num = Number(value);
+  return num < 0 ? {type: 'ok', note: '负值✓'} : {type: 'warn', note: '需标准化→负值'};
+}
+
+function renderDatabase() {
+  let rows = RAW_DATA.slice();
+
+  const comp = document.getElementById('dbCompanyFilter').value;
+  const code = document.getElementById('dbCodeFilter').value.trim();
+  const period = document.getElementById('dbPeriodFilter').value;
+  const rp = document.getElementById('dbReportPeriodFilter').value;
+  const kw = document.getElementById('dbKeywordFilter').value.trim();
+
+  if (comp) rows = rows.filter(r => r['公司名称'] === comp);
+  if (code) {
+    const codes = code.split(/[,，\s]+/).filter(Boolean);
+    rows = rows.filter(r => codes.includes(r['指标编号']));
+  }
+  if (period) rows = rows.filter(r => r['期间'] === period);
+  if (rp) rows = rows.filter(r => r['报告期'] === rp);
+  if (kw) rows = rows.filter(r => String(r['指标名称']).includes(kw) || String(r['关键词']).includes(kw));
+
+  // 排序：报告期 → 公司 → 报表类型 → 指标编号 → 期间
+  rows.sort((a, b) => {
+    const p = (a['报告期'] || '').localeCompare(b['报告期'] || '');
+    if (p) return p;
+    const c = (a['公司名称'] || '').localeCompare(b['公司名称'] || '');
+    if (c) return c;
+    const t = (a['报表类型'] || '').localeCompare(b['报表类型'] || '');
+    if (t) return t;
+    const cc = (a['指标编号'] || '').localeCompare(b['指标编号'] || '');
+    if (cc) return cc;
+    return (a['期间'] || '').localeCompare(b['期间'] || '');
+  });
+
+  document.getElementById('dbInfo').textContent = `共 ${rows.length} 行数据（当前数据库：17家公司 · ${RAW_DATA.length}行 · 81个指标）`;
+
+  if (rows.length === 0) {
+    document.getElementById('dbTableContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--c-text-muted);">没有匹配的数据</div>';
+    return;
+  }
+
+  // 公司名列固定在左侧
+  const thead = DB_COLUMNS.map(c => {
+    if (c === '公司名称') return '<th class="sticky-col">公司名称</th>';
+    return `<th>${c}</th>`;
+  }).join('');
+
+  const fmtNum = (v) => {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'string') return v;
+    return Number(v).toLocaleString('zh-CN', {maximumFractionDigits: 2});
+  };
+
+  const tbody = rows.map(r => {
+    const val = r['数值-换算'];
+    const isStrVal = typeof val === 'string';
+    const valHtml = isStrVal
+      ? `<td class="col-num">${val}</td>`
+      : val === null || val === undefined
+        ? '<td class="col-num" style="color:var(--c-text-muted);">—</td>'
+        : `<td class="col-num ${val < 0 ? 'neg' : (val > 0 ? 'pos' : '')}">${fmtNum(val)}</td>`;
+
+    const dispVal = r['数值-披露'];
+    const dispHtml = `<td class="col-num">${fmtNum(dispVal)}</td>`;
+
+    const std = getStdStatus(r['指标编号'], val);
+    const stdHtml = std.type === 'ok'
+      ? '<td class="col-std std-ok">' + std.note + '</td>'
+      : std.type === 'warn'
+        ? '<td class="col-std std-warn">' + std.note + '</td>'
+        : '<td class="col-std" style="color:var(--c-text-muted);">' + (std.note || '') + '</td>';
+
+    return `<tr>
+      <td class="col-type">${r['公司类型']}</td><td class="sticky-col">${r['公司名称']}</td><td class="col-report">${r['报告期']}</td>
+      <td>${r['报表类型']}</td><td class="col-name">${r['报表名称']}</td><td class="col-code">${r['指标编号']}</td>
+      <td class="col-name">${r['指标名称']}</td><td class="col-src">${r['指标来源']}</td>
+      <td class="col-period">${r['期间']}</td>${valHtml}${dispHtml}
+      <td class="col-src" style="font-size:10px;color:var(--c-text-muted);">${r['来源表']}</td>
+      ${stdHtml}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('dbTableContainer').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table db-table">
+        <thead><tr>${thead}</tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  `;
 }
 
 // ============== Update ==============
@@ -1448,17 +2110,24 @@ function applyTheme(theme) {
     o.classList.toggle('active', o.dataset.theme === theme);
   });
   refreshThemeColors();
-  if (typeof renderCharts === 'function' && hasApplied) renderCharts();
+  if (currentView === 'database') renderDatabase();
+  else if (typeof renderCharts === 'function' && hasApplied) renderCharts();
 }
 
 // ============== Chart Export ==============
 function getChartInstance(id) {
-  return echarts.getInstanceByDom(document.getElementById(id));
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const direct = echarts.getInstanceByDom(el);
+  if (direct) return direct;
+  // 瀑布图：多个子实例，取第一个
+  if (el._wfInstances && el._wfInstances.length) return el._wfInstances[0];
+  return null;
 }
 
 function exportChartAsPng(chartId) {
   const inst = getChartInstance(chartId);
-  if (!inst) { alert('图表未渲染'); return; }
+  if (!inst) { showToast('图表未渲染'); return; }
   const url = inst.getDataURL({
     type: 'png',
     pixelRatio: 2,
@@ -1472,7 +2141,7 @@ function exportChartAsPng(chartId) {
 
 async function copyChartToClipboard(chartId) {
   const inst = getChartInstance(chartId);
-  if (!inst) { alert('图表未渲染'); return; }
+  if (!inst) { showToast('图表未渲染'); return; }
   try {
     const url = inst.getDataURL({type: 'png', pixelRatio: 2});
     const blob = await (await fetch(url)).blob();
@@ -1503,10 +2172,6 @@ function initExportButtons() {
       menu.classList.toggle('show');
     });
   });
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.export-menu.show').forEach(m => m.classList.remove('show'));
-  });
-  document.querySelectorAll('.export-menu').forEach(m => m.addEventListener('click', e => e.stopPropagation()));
   document.querySelectorAll('.export-menu-item').forEach(item => {
     item.addEventListener('click', () => {
       const action = item.dataset.action;
@@ -1516,6 +2181,7 @@ function initExportButtons() {
       item.parentElement.classList.remove('show');
     });
   });
+  document.querySelectorAll('.export-menu').forEach(m => m.addEventListener('click', e => e.stopPropagation()));
 }
 
 // ============== Init ==============
@@ -1524,6 +2190,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDropdowns();
   initTheme();
   initSidebar();
+  initDbFilters();
 
   document.getElementById('companySearch').addEventListener('input', e => {
     renderCompanyGroups(e.target.value);
@@ -1561,10 +2228,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // DB filters
+  ['dbCompanyFilter', 'dbCodeFilter', 'dbPeriodFilter', 'dbReportPeriodFilter', 'dbKeywordFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', renderDatabase);
+  });
+  document.getElementById('dbReset').addEventListener('click', () => {
+    document.getElementById('dbCompanyFilter').value = '';
+    document.getElementById('dbCodeFilter').value = '';
+    document.getElementById('dbPeriodFilter').value = '';
+    document.getElementById('dbKeywordFilter').value = '';
+    renderDatabase();
+  });
+
   buildChartCards();
   initExportButtons();
   updateAll();
   applyFilters();
+
+  // 页面完全加载（字体/布局就绪）后重算图表尺寸，避免瀑布图等初始渲染异常
+  window.addEventListener('load', () => {
+    if (currentView === 'database') renderDatabase();
+    else if (hasApplied) renderCharts();
+  });
 });
 </script>
 </body>
