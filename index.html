@@ -1469,8 +1469,67 @@ function getValueFormatter(config, idx) {
   return config.valueFormatter || null;
 }
 
-function buildSeries(config, data) {
+function buildSeries(config, data, multiPeriod) {
   const series = [];
+  // 多报告期时系列命名：单指标直接显示报告期，多指标加指标名前缀
+  const sname = (idx, rp) => (config.indicators.length === 1 ? rp : config.displayNames[idx] + '（' + rp + '）');
+
+  if (multiPeriod) {
+    // 多报告期：x 轴只显示公司名，报告期通过 legend 颜色区分
+    // 系列 = 指标 × 报告期
+    const companies = data.map(d => d.company).filter((v, i, a) => a.indexOf(v) === i);
+    const rps = data.map(d => d.reportPeriod).filter((v, i, a) => a.indexOf(v) === i);
+
+    if (config.chartType === 'line') {
+      rps.forEach(rp => {
+        config.indicators.forEach((ind, idx) => {
+          series.push({
+            name: sname(idx, rp),
+            type: 'line',
+            data: companies.map(c => {
+              const pt = data.find(d => d.company === c && d.reportPeriod === rp);
+              return pt ? pt.values[ind] : null;
+            }),
+            symbolSize: 6,
+            lineStyle: { width: 2 },
+            label: lineLabel(config)
+          });
+        });
+      });
+    } else if (config.chartType === 'stackedBar') {
+      // 堆叠必须按报告期分组：同一报告期的指标堆叠，不同报告期并排
+      rps.forEach(rp => {
+        config.indicators.forEach((ind, idx) => {
+          series.push({
+            name: sname(idx, rp),
+            type: 'bar',
+            stack: 's-' + rp,
+            data: companies.map(c => {
+              const pt = data.find(d => d.company === c && d.reportPeriod === rp);
+              return pt ? pt.values[ind] : null;
+            })
+          });
+        });
+      });
+      addStackedTotalLabel(series, config.unit === '%');
+    } else {
+      // groupedBar / bar
+      rps.forEach(rp => {
+        config.indicators.forEach((ind, idx) => {
+          series.push({
+            name: sname(idx, rp),
+            type: 'bar',
+            data: companies.map(c => {
+              const pt = data.find(d => d.company === c && d.reportPeriod === rp);
+              return pt ? pt.values[ind] : null;
+            }),
+            label: barLabel(config)
+          });
+        });
+      });
+    }
+    return series;
+  }
 
   if (config.chartType === 'line') {
     config.indicators.forEach((ind, idx) => {
@@ -1480,7 +1539,8 @@ function buildSeries(config, data) {
         // data 保留原始数值，tooltip/坐标轴负责格式化显示
         data: data.map(d => d.values[ind]),
         symbolSize: 6,
-        lineStyle: { width: 2 }
+        lineStyle: { width: 2 },
+        label: lineLabel(config)
       });
     });
   } else if (config.chartType === 'stackedBar') {
@@ -1492,16 +1552,90 @@ function buildSeries(config, data) {
         data: data.map(d => d.values[ind])
       });
     });
+    // 堆叠柱状图：柱顶显示合计值
+    addStackedTotalLabel(series, config.unit === '%');
   } else {
     config.indicators.forEach((ind, idx) => {
       series.push({
         name: config.displayNames[idx],
         type: 'bar',
-        data: data.map(d => d.values[ind])
+        data: data.map(d => d.values[ind]),
+        label: barLabel(config)
       });
     });
   }
   return series;
+}
+
+// 普通柱状图柱顶直接显示数值
+function barLabel(config) {
+  return {
+    show: true,
+    position: 'top',
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    formatter: (params) => {
+      const v = params.value;
+      if (v === null || v === undefined || !isFinite(Number(v))) return '';
+      if (config.unit === '%') return (v * 100).toFixed(1) + '%';
+      return Number(v).toLocaleString('zh-CN', {maximumFractionDigits: 1});
+    }
+  };
+}
+
+// 折线图数据点直接显示数值
+function lineLabel(config) {
+  return {
+    show: true,
+    position: 'top',
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    formatter: (params) => {
+      const v = params.value;
+      if (v === null || v === undefined || !isFinite(Number(v))) return '';
+      if (config.unit === '%') return (v * 100).toFixed(1) + '%';
+      return Number(v).toLocaleString('zh-CN', {maximumFractionDigits: 1});
+    }
+  };
+}
+
+// 堆叠柱状图：在每组 stack 最顶端可见段上方显示合计值
+function addStackedTotalLabel(series, pct) {
+  const groups = {};
+  series.forEach((s, i) => {
+    const key = s.stack || ('n-' + i);
+    (groups[key] = groups[key] || []).push(s);
+  });
+  Object.values(groups).forEach(group => {
+    group.forEach((s, gIdx) => {
+      s.label = {
+        show: true,
+        position: 'top',
+        fontSize: 10,
+        color: COLORS.textSecondary,
+        formatter: (params) => {
+          const idx = params.dataIndex;
+          // 仅当本系列是该 x 位置上"最后一个非 null 段"时才显示合计，避免重复
+          for (let k = gIdx + 1; k < group.length; k++) {
+            const v = group[k].data[idx];
+            if (v !== null && v !== undefined) return '';
+          }
+          let total = 0;
+          group.forEach(g => {
+            const v = g.data[idx];
+            if (v !== null && v !== undefined && isFinite(Number(v))) total += Number(v);
+          });
+          return fmtStackedTotal(total, pct);
+        }
+      };
+    });
+  });
+}
+
+function fmtStackedTotal(total, pct) {
+  if (pct) return (total * 100).toFixed(2) + '%';
+  if (total === 0) return '0.00';
+  return total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 // 统一 tooltip 数值格式化：两位小数
@@ -1516,21 +1650,44 @@ function tooltipValueFormatter(config) {
 }
 
 // 堆叠柱状图 tooltip：各项 + 合计
-function stackedTooltipFormatter(config) {
+// 多报告期时系列按 stack 组（报告期）拆开，tooltip 需按组分别合计
+function stackedTooltipFormatter(config, series) {
   const fmt = tooltipValueFormatter(config);
+  // 预计算每个 series 的 stack 组 key 与报告期
+  const stackInfo = series.map(s => {
+    const stk = s.stack || 'n';
+    const m = stk.match(/^s-(.*)$/);
+    return { rp: m ? m[1] : null, stack: stk };
+  });
   return (params) => {
     if (!Array.isArray(params)) params = [params];
-    let total = 0;
-    let html = '';
+    // 按 stack 组聚合
+    const groups = {};
     params.forEach(p => {
-      const v = p.value;
-      if (v !== null && v !== undefined && isFinite(Number(v))) total += Number(v);
-      html += `${p.marker}${p.seriesName}：${fmt(v)}<br/>`;
+      const info = stackInfo[p.seriesIndex] || { stack: 'n', rp: null };
+      (groups[info.stack] = groups[info.stack] || { rp: info.rp, items: [] }).items.push(p);
     });
-    const totalStr = config.unit === '%'
-      ? (total * 100).toFixed(2) + '%'
-      : total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    html += `<div style="border-top:1px solid #E8E8E8;margin-top:4px;padding-top:4px;font-weight:700;color:#1A1A1A;">合计：${totalStr}</div>`;
+    let html = '';
+    const keys = Object.keys(groups);
+    keys.forEach((key, gi) => {
+      const g = groups[key];
+      let total = 0;
+      let gHtml = '';
+      g.items.forEach(p => {
+        const v = p.value;
+        if (v !== null && v !== undefined && isFinite(Number(v))) total += Number(v);
+        gHtml += `${p.marker}${p.seriesName}：${fmt(v)}<br/>`;
+      });
+      const totalStr = config.unit === '%'
+        ? (total * 100).toFixed(2) + '%'
+        : total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      if (keys.length > 1) {
+        html += `<div style="font-weight:700;color:#1A1A1A;margin-bottom:2px;">${g.rp || key}</div>`;
+      }
+      html += gHtml;
+      html += `<div style="border-top:1px solid #E8E8E8;margin-top:4px;padding-top:4px;font-weight:700;color:#1A1A1A;">合计：${totalStr}</div>`;
+      if (gi < keys.length - 1) html += '<div style="height:6px;"></div>';
+    });
     return html;
   };
 }
@@ -1625,8 +1782,31 @@ function fmtNum(v) {
 }
 
 // ===== 组合图（柱+线，双轴） =====
-function buildBarLine(config, data) {
+function buildBarLine(config, data, multiPeriod) {
   const series = [];
+  const sname = (idx, rp) => (config.indicators.length === 1 ? rp : config.displayNames[idx] + '（' + rp + '）');
+  if (multiPeriod) {
+    // 多报告期：系列 = 指标 × 报告期；bar 用 y0，line 用 y1
+    const companies = data.map(d => d.company).filter((v, i, a) => a.indexOf(v) === i);
+    const rps = data.map(d => d.reportPeriod).filter((v, i, a) => a.indexOf(v) === i);
+    rps.forEach(rp => {
+      config.indicators.forEach((ind, idx) => {
+        const isLine = idx === config.indicators.length - 1;
+        series.push({
+          name: sname(idx, rp),
+          type: isLine ? 'line' : 'bar',
+          yAxisIndex: isLine ? 1 : 0,
+          data: companies.map(c => {
+            const pt = data.find(d => d.company === c && d.reportPeriod === rp);
+            return pt ? pt.values[ind] : null;
+          }),
+          symbolSize: 6,
+          ...(isLine ? { lineStyle: { width: 2 }, label: lineLabel(config) } : { label: barLabel(config) })
+        });
+      });
+    });
+    return series;
+  }
   config.indicators.forEach((ind, idx) => {
     const isLine = idx === config.indicators.length - 1;
     series.push({
@@ -1635,10 +1815,177 @@ function buildBarLine(config, data) {
       yAxisIndex: isLine ? 1 : 0,
       data: data.map(d => d.values[ind]),
       symbolSize: 6,
-      ...(isLine ? { lineStyle: { width: 2 } } : {})
+      ...(isLine ? { lineStyle: { width: 2 }, label: lineLabel(config) } : { label: barLabel(config) })
     });
   });
   return series;
+}
+
+function dedupe(arr) {
+  return arr.filter((v, i) => arr.indexOf(v) === i);
+}
+
+// ===== 方案A：单报告期 + periodPair 双柱图（期初/期末 或 上期/本期）+ 增减% =====
+// periodPair 形如 ['期初','期末'] 或 ['上期','本期']：第一个是基准期间，第二个是主期间
+// 增减% 显示在 期初/期末 两柱之间的空白处（markPoint 定位在 category 中心、两柱中上部）
+function renderPeriodPairBar(config, data, rp, el) {
+  const existing = echarts.getInstanceByDom(el);
+  if (existing) existing.dispose();
+  const chart = echarts.init(el);
+
+  const [basePeriod, mainPeriod] = config.periodPair;
+  const ind = config.indicators[0];
+  const companies = data.map(d => d.company);
+  const baseVals = companies.map(c => getIndicatorValue(c, ind, basePeriod, rp, config.periodMap));
+  const mainVals = companies.map(c => getIndicatorValue(c, ind, mainPeriod, rp, config.periodMap));
+
+  // 增减%标记：位于两柱之间的空隙（x=category 中心），垂直位于两柱中上部
+  const deltaPoints = companies.map((c, i) => {
+    const b = baseVals[i], m = mainVals[i];
+    if (b === null || b === undefined || m === null || m === undefined || Number(b) === 0) return null;
+    const d = (Number(m) - Number(b)) / Math.abs(Number(b));
+    // 取两柱中高度较大者的中部（正柱取上中部，负柱取下中部）
+    const magMax = Math.max(Math.abs(Number(b)), Math.abs(Number(m)));
+    const y = (Number(b) + Number(m) >= 0 ? 1 : -1) * magMax * 0.5;
+    return {
+      coord: [i, y],
+      value: `${d >= 0 ? '▲' : '▼'} ${(Math.abs(d) * 100).toFixed(1)}%`,
+      label: { color: d >= 0 ? COLORS.up : COLORS.down, fontSize: 10, fontWeight: 700 }
+    };
+  }).filter(x => x !== null);
+
+  // 两柱柱顶都显示数值
+  const series = [
+    { name: basePeriod, type: 'bar', data: baseVals, label: barLabel(config) },
+    {
+      name: mainPeriod, type: 'bar', data: mainVals, label: barLabel(config),
+      ...(deltaPoints.length ? {
+        markPoint: {
+          symbol: 'none',
+          data: deltaPoints,
+          label: { show: true, position: 'top', distance: 2 }
+        }
+      } : {})
+    }
+  ];
+  const legendData = [basePeriod, mainPeriod];
+
+  const textStyle = { fontSize: 11, color: COLORS.textPrimary };
+  const option = {
+    color: COLORS,
+    tooltip: Object.assign({}, TOOLTIP_BASE(), { valueFormatter: tooltipValueFormatter(config) }),
+    legend: { data: legendData, top: 4, itemGap: 18, textStyle },
+    grid: { left: 60, top: 40, bottom: 30, right: 40 },
+    xAxis: { type: 'category', data: companies, axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: companies.length > 6 ? 25 : 0 } },
+    yAxis: getYAxis(config, false).map(y => ({
+      ...y,
+      nameTextStyle: { fontSize: 10, color: COLORS.textMuted },
+      axisLabel: { fontSize: 10, ...(y.axisLabel || {}) }
+    })),
+    series
+  };
+  chart.setOption(option);
+
+  if (!el._resizeBound) {
+    window.addEventListener('resize', function() {
+      const inst = echarts.getInstanceByDom(el);
+      if (inst) inst.resize();
+    });
+    el._resizeBound = true;
+  }
+}
+
+// ===== 方案A：单报告期 + periodPair 堆叠柱状图（如 本期初 vs 本期末）+ 合计数增减% =====
+// 两组堆叠柱并排：基准期间组 + 主期间组；增减% 用 合计数（两组各自 sum）的增减，
+// 显示在两堆叠柱之间的空白处
+function renderPeriodPairStacked(config, data, rp, el) {
+  const existing = echarts.getInstanceByDom(el);
+  if (existing) existing.dispose();
+  const chart = echarts.init(el);
+
+  const [basePeriod, mainPeriod] = config.periodPair;
+  const companies = data.map(d => d.company);
+  const inds = config.indicators;
+
+  // 系列：基准期间组（stack 'b'）+ 主期间组（stack 'm'），细项名带期间后缀
+  const sname = (idx, p) => config.displayNames[idx] + '（' + p + '）';
+  const baseSeries = inds.map((ind, idx) => ({
+    name: sname(idx, basePeriod),
+    type: 'bar',
+    stack: 'b',
+    data: companies.map(c => getIndicatorValue(c, ind, basePeriod, rp, config.periodMap))
+  }));
+  const mainSeries = inds.map((ind, idx) => ({
+    name: sname(idx, mainPeriod),
+    type: 'bar',
+    stack: 'm',
+    data: companies.map(c => getIndicatorValue(c, ind, mainPeriod, rp, config.periodMap))
+  }));
+  const series = [...baseSeries, ...mainSeries];
+
+  // 合计数：两组各自 sum
+  const sumOf = (sList, i) => {
+    let t = 0, has = false;
+    sList.forEach(s => {
+      const v = s.data[i];
+      if (v !== null && v !== undefined && isFinite(Number(v))) { t += Number(v); has = true; }
+    });
+    return has ? t : null;
+  };
+  const baseTotals = companies.map((c, i) => sumOf(baseSeries, i));
+  const mainTotals = companies.map((c, i) => sumOf(mainSeries, i));
+
+  // 合计数增减%标记：位于两组堆叠柱之间的空隙（x=category 中心），垂直在两柱中上部
+  const deltaPoints = companies.map((c, i) => {
+    const b = baseTotals[i], m = mainTotals[i];
+    if (b === null || b === undefined || m === null || m === undefined || Number(b) === 0) return null;
+    const d = (Number(m) - Number(b)) / Math.abs(Number(b));
+    const magMax = Math.max(Math.abs(Number(b)), Math.abs(Number(m)));
+    const y = (Number(b) + Number(m) >= 0 ? 1 : -1) * magMax * 0.5;
+    return {
+      coord: [i, y],
+      value: `${d >= 0 ? '▲' : '▼'} ${(Math.abs(d) * 100).toFixed(1)}%`,
+      label: { color: d >= 0 ? COLORS.up : COLORS.down, fontSize: 10, fontWeight: 700 }
+    };
+  }).filter(x => x !== null);
+
+  // 各组堆叠柱顶显示合计值（挂在每组最后一个系列上）
+  if (deltaPoints.length) {
+    mainSeries[mainSeries.length - 1].markPoint = {
+      symbol: 'none',
+      data: deltaPoints,
+      label: { show: true, position: 'top', distance: 2 }
+    };
+  }
+
+  // 堆叠合计 label（柱顶显示各组合计数值）
+  const seriesPct = config.unit === '%';
+  addStackedTotalLabel(series, seriesPct);
+
+  const legendData = series.map(s => s.name);
+  const textStyle = { fontSize: 11, color: COLORS.textPrimary };
+  const option = {
+    color: COLORS,
+    tooltip: Object.assign({}, TOOLTIP_BASE(), { formatter: stackedTooltipFormatter(config, series) }),
+    legend: { data: legendData, top: 4, itemGap: 18, textStyle },
+    grid: { left: 60, top: 40, bottom: 30, right: 40 },
+    xAxis: { type: 'category', data: companies, axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: companies.length > 6 ? 25 : 0 } },
+    yAxis: getYAxis(config, false).map(y => ({
+      ...y,
+      nameTextStyle: { fontSize: 10, color: COLORS.textMuted },
+      axisLabel: { fontSize: 10, ...(y.axisLabel || {}) }
+    })),
+    series
+  };
+  chart.setOption(option);
+
+  if (!el._resizeBound) {
+    window.addEventListener('resize', function() {
+      const inst = echarts.getInstanceByDom(el);
+      if (inst) inst.resize();
+    });
+    el._resizeBound = true;
+  }
 }
 
 // ===== 表格 =====
@@ -1655,30 +2002,74 @@ function renderTableChart(config, data, container) {
   // 多报告期时行/列标签带报告期
   const multiPeriod = appliedState.periods && appliedState.periods.length > 1;
   const labelOf = d => multiPeriod ? (d.company + '\n' + d.reportPeriod) : d.company;
+  // 报告期排序（2024年度 < 2025年度）
+  const rps = data.map(d => d.reportPeriod).filter((v, i, a) => a.indexOf(v) === i).sort();
 
   if (config.tableTranspose) {
-    // 转置：公司（×报告期）为行，指标为列
+    // 转置：公司为行，指标为列
+    const companies = data.map(d => d.company).filter((v, i, a) => a.indexOf(v) === i);
     const headerCells = config.displayNames.map((name, i) => {
       const ind = config.indicators[i];
       return `<th>${name}${ind ? `<div style="font-size:9px;font-family:JetBrains Mono,monospace;font-weight:400;color:var(--c-text-muted);">${ind}</div>` : ''}</th>`;
     }).join('');
-    const bodyRows = data.map(d => {
+
+    // 单元格：主值 + 副值 + 增减%（periodPairs 或 多报告期对比时）
+    const cellHtml = (mainV, baseV, delta, mainTag, baseTag) => {
+      if (mainV === null || mainV === undefined) return '<td style="color:var(--c-text-muted);">—</td>';
+      const num = Number(mainV);
+      const cls = num < 0 ? 'neg' : (num > 0 ? 'pos' : '');
+      const mainStr = fmtTableNum(mainV, config, 0);
+      if (baseV === null || baseV === undefined || delta === null || delta === undefined) {
+        return `<td class="${cls}"><div>${mainStr}</div>${baseV !== null && baseV !== undefined ? `<div style="font-size:9px;color:var(--c-text-muted);">${baseTag} ${fmtTableNum(baseV, config, 0)}</div>` : ''}</td>`;
+      }
+      const up = delta >= 0;
+      const deltaStr = (up ? '▲' : '▼') + (Math.abs(delta) * 100).toFixed(1) + '%';
+      return `<td class="${cls}"><div>${mainStr}</div><div style="font-size:9px;color:var(--c-text-muted);">${baseTag} ${fmtTableNum(baseV, config, 0)} <span style="color:${up ? 'var(--c-up)' : 'var(--c-down)'};">${deltaStr}</span></div></td>`;
+    };
+
+    const bodyRows = companies.map(c => {
       const cells = config.indicators.map((ind, i) => {
-        const v = d.values[ind];
+        const mainPeriod = (config.periods && config.periods[i]) || config.period;
+        // 多报告期：主值=最新报告期，基准值=上一报告期（同一期间）
+        if (multiPeriod && rps.length >= 2) {
+          const latestRp = rps[rps.length - 1];
+          const prevRp = rps[rps.length - 2];
+          const pt = data.find(d => d.company === c && d.reportPeriod === latestRp);
+          const ptPrev = data.find(d => d.company === c && d.reportPeriod === prevRp);
+          const mainV = pt ? pt.values[ind] : null;
+          const baseV = ptPrev ? ptPrev.values[ind] : null;
+          let delta = null;
+          if (mainV !== null && mainV !== undefined && baseV !== null && baseV !== undefined && Number(baseV) !== 0) {
+            delta = (Number(mainV) - Number(baseV)) / Math.abs(Number(baseV));
+          }
+          return cellHtml(mainV, baseV, delta, latestRp.replace('年度', ''), prevRp.replace('年度', ''));
+        }
+        // 单报告期 + periodPairs：主值=期末/本期，基准值=期初/上期
+        const pair = config.periodPairs && config.periodPairs[i];
+        if (pair) {
+          const pt = data.find(d => d.company === c);
+          const mainV = pt ? pt.values[ind] : null;
+          const baseV = getIndicatorValue(c, ind, pair[0], rps[0], config.periodMap);
+          let delta = null;
+          if (mainV !== null && mainV !== undefined && baseV !== null && baseV !== undefined && Number(baseV) !== 0) {
+            delta = (Number(mainV) - Number(baseV)) / Math.abs(Number(baseV));
+          }
+          return cellHtml(mainV, baseV, delta, pair[1], pair[0]);
+        }
+        // 默认：仅主值
+        const pt = data.find(d => d.company === c);
+        const v = pt ? pt.values[ind] : null;
         if (v === null || v === undefined) return '<td style="color:var(--c-text-muted);">—</td>';
         const num = Number(v);
         const cls = num < 0 ? 'neg' : (num > 0 ? 'pos' : '');
         return `<td class="${cls}">${fmtTableNum(v, config, i)}</td>`;
       });
-      const rowLabel = multiPeriod
-        ? `<td class="label" style="white-space:normal;">${d.company}<div style="font-size:10px;color:var(--c-text-muted);font-family:JetBrains Mono,monospace;">${d.reportPeriod}</div></td>`
-        : `<td class="label">${d.company}</td>`;
-      return `<tr>${rowLabel}${cells.join('')}</tr>`;
+      return `<tr><td class="label">${c}</td>${cells.join('')}</tr>`;
     }).join('');
     container.innerHTML = `
       <div class="data-table-wrap">
         <table class="data-table">
-          <thead><tr><th>公司${multiPeriod ? ' / 报告期' : ''}</th>${headerCells}</tr></thead>
+          <thead><tr><th>公司</th>${headerCells}</tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
       </div>
@@ -1757,20 +2148,44 @@ function renderChart(config) {
     return;
   }
 
+  // ===== 方案A：单报告期 + periodPair（期初/期末 或 上期/本期 双柱/双堆叠 + 增减%）=====
+  if (config.periodPair && reportPeriods.length === 1) {
+    if (config.chartType === 'stackedBar') {
+      renderPeriodPairStacked(config, data, reportPeriods[0], el);
+    } else if (config.chartType === 'bar') {
+      renderPeriodPairBar(config, data, reportPeriods[0], el);
+    } else {
+      renderPeriodPairBar(config, data, reportPeriods[0], el);
+    }
+    return;
+  }
+
   const existing = echarts.getInstanceByDom(el);
   if (existing) existing.dispose();
 
   const chart = echarts.init(el);
-  // 堆叠柱状图：tooltip 显示各项 + 合计
+
+  // 多报告期：x 轴只显示公司名，报告期通过 legend 颜色区分
+  const multiPeriod = reportPeriods.length > 1;
+
+  let series, legendData;
+  if (config.chartType === 'barLine') {
+    series = buildBarLine(config, data, multiPeriod);
+    legendData = series.map(s => s.name);
+    if (multiPeriod) legendData = dedupe(legendData);
+  } else {
+    series = buildSeries(config, data, multiPeriod);
+    legendData = series.map(s => s.name);
+  }
+
+  // 堆叠柱状图：tooltip 显示各项 + 合计（多报告期时按 stack 组分别合计）
   const tooltip = config.chartType === 'stackedBar'
-    ? Object.assign({}, TOOLTIP_BASE(), { formatter: stackedTooltipFormatter(config) })
+    ? Object.assign({}, TOOLTIP_BASE(), { formatter: stackedTooltipFormatter(config, series) })
     : Object.assign({}, TOOLTIP_BASE(), { valueFormatter: tooltipValueFormatter(config) });
 
-  // x 轴：先区分公司，同一公司多报告期并排；多报告期时标签带报告期
-  const multiPeriod = reportPeriods.length > 1;
-  const xLabel = d => multiPeriod ? (d.company + '\n' + d.reportPeriod) : d.company;
-  const xData = data.map(d => xLabel(d));
-  const legendData = config.displayNames.slice();
+  const xData = multiPeriod
+    ? data.map(d => d.company).filter((v, i, a) => a.indexOf(v) === i)
+    : data.map(d => d.company);
   const textStyle = { fontSize: 11, color: COLORS.textPrimary };
 
   // legend 位置：默认顶部；legendBottom 时放底部（避免与 y 轴单位"亿元"重叠）
@@ -1789,7 +2204,6 @@ function renderChart(config) {
   let option;
 
   if (config.chartType === 'barLine') {
-    const series = buildBarLine(config, data);
     option = {
       color: COLORS,
       tooltip,
@@ -1800,7 +2214,6 @@ function renderChart(config) {
       series
     };
   } else {
-    const series = buildSeries(config, data);
     option = {
       color: COLORS,
       tooltip,

@@ -25,7 +25,10 @@ const CHART_CONFIGS = [
     chartType: 'table',
     tableTranspose: true,
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    // 单报告期时每个指标展示 期初/上期 + 期末/本期 两个值及增减%
+    periodPairs: [['期初', '期末'], ['期初', '期末'], ['上期', '本期'], ['上期', '本期'], ['上期', '本期']],
+    delta: true
   },
   {
     id: 'chart2',
@@ -35,7 +38,10 @@ const CHART_CONFIGS = [
     displayNames: ['总资产'],
     chartType: 'bar',
     period: '期末',
-    unit: '亿元'
+    unit: '亿元',
+    // 单报告期时展示 期初+期末 两柱，柱顶显示增减%
+    periodPair: ['期初', '期末'],
+    delta: true
   },
   {
     id: 'chart3',
@@ -45,7 +51,9 @@ const CHART_CONFIGS = [
     displayNames: ['净资产'],
     chartType: 'bar',
     period: '期末',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['期初', '期末'],
+    delta: true
   },
   {
     id: 'chart4',
@@ -55,7 +63,9 @@ const CHART_CONFIGS = [
     displayNames: ['净利润'],
     chartType: 'bar',
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['上期', '本期'],
+    delta: true
   },
   {
     id: 'chart5',
@@ -65,7 +75,9 @@ const CHART_CONFIGS = [
     displayNames: ['其他综合收益(OCI)'],
     chartType: 'bar',
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['上期', '本期'],
+    delta: true
   },
   {
     id: 'chart6',
@@ -75,7 +87,9 @@ const CHART_CONFIGS = [
     displayNames: ['CSM余额'],
     chartType: 'bar',
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['上期', '本期'],
+    delta: true
   },
   {
     id: 'chart7',
@@ -85,7 +99,10 @@ const CHART_CONFIGS = [
     displayNames: ['采用修正追溯法计量的合同', '采用公允价值法计量的合同', '其他保险合同'],
     chartType: 'stackedBar',
     period: '本期末',
-    unit: '亿元'
+    unit: '亿元',
+    // 堆叠柱状图：单报告期展示 本期初+本期末 两组堆叠，增减%用合计数的增减
+    periodPair: ['本期初', '本期末'],
+    delta: true
   },
   {
     id: 'chart8',
@@ -95,7 +112,9 @@ const CHART_CONFIGS = [
     displayNames: ['新业务CSM'],
     chartType: 'bar',
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['上期', '本期'],
+    delta: true
   },
   {
     id: 'chart9',
@@ -105,7 +124,9 @@ const CHART_CONFIGS = [
     displayNames: ['新业务LC'],
     chartType: 'bar',
     period: '本期',
-    unit: '亿元'
+    unit: '亿元',
+    periodPair: ['上期', '本期'],
+    delta: true
   },
 
   // ==================== 利润分析 ====================
