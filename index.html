@@ -828,6 +828,171 @@ body {
 .dot-std { background: #2D7D5E; }
 .dot-warn { background: #B83A3A; }
 
+/* ===== 年报下载 / 智能提取 页面 ===== */
+.page-view { padding: 20px 28px; }
+.page-header { margin-bottom: 14px; }
+.page-header h2 { font-size: 18px; color: var(--c-text-primary); margin-bottom: 2px; }
+.page-header .page-sub { font-size: 12px; color: var(--c-text-muted); }
+.stat-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 12px 18px;
+  min-width: 110px;
+  text-align: center;
+}
+.stat-card .num { font-size: 22px; font-weight: 700; color: var(--c-navy); font-family: 'JetBrains Mono', monospace; }
+.stat-card .lbl { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+.dl-controls {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.dl-controls select, .dl-controls input[type="text"] {
+  padding: 5px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+  outline: none;
+}
+.dl-controls select:focus, .dl-controls input[type="text"]:focus { border-color: var(--c-navy); }
+.dl-controls label { font-size: 12px; color: var(--c-text-secondary); white-space: nowrap; }
+.dl-controls .dl-count { margin-left: auto; font-size: 12px; color: var(--c-text-muted); font-family: 'JetBrains Mono', monospace; }
+.dl-note {
+  background: var(--c-navy-light);
+  border: 1px solid var(--c-border);
+  border-left: 3px solid var(--c-navy);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.dl-note code {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 2px;
+  padding: 0 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--c-navy);
+}
+.dl-table-wrap { overflow-x: auto; max-height: 560px; overflow-y: auto; }
+/* 准则标签 */
+.std-tag { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; white-space: nowrap; }
+.std-new { background: rgba(45,125,94,.12); color: #1D6A4F; border: 1px solid rgba(45,125,94,.3); }
+.std-old { background: rgba(184,58,58,.08); color: #9B3A3A; border: 1px solid rgba(184,58,58,.25); }
+.std-delay { background: rgba(193,149,76,.12); color: #8A6A2E; border: 1px solid rgba(193,149,76,.35); }
+.std-na { background: rgba(128,128,128,.1); color: #777; border: 1px solid rgba(128,128,128,.3); }
+/* PDF 状态按钮 */
+.pdf-btn {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-secondary);
+  border-radius: 3px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.pdf-btn:hover { border-color: var(--c-navy); color: var(--c-navy); }
+.pdf-btn.done { background: rgba(45,125,94,.1); border-color: rgba(45,125,94,.4); color: #1D6A4F; }
+/* 官网链接 */
+.dl-link { color: var(--c-navy); text-decoration: none; font-size: 11px; word-break: break-all; }
+.dl-link:hover { text-decoration: underline; }
+/* 智能提取 */
+.ext-steps {
+  display: flex;
+  gap: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+.ext-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  padding: 0 12px;
+  white-space: nowrap;
+  position: relative;
+}
+.ext-step:not(:last-child)::after {
+  content: '→';
+  color: var(--c-border);
+  margin-left: 12px;
+}
+.ext-step .step-no {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--c-border);
+  color: var(--c-text-muted);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.ext-step.done .step-no { background: var(--c-navy); color: #fff; }
+.ext-step.done { color: var(--c-text-primary); }
+.ext-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.ext-tabs { display: flex; gap: 6px; }
+.ext-tab {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-secondary);
+  border-radius: 4px;
+  padding: 5px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ext-tab.active { background: var(--c-navy); border-color: var(--c-navy); color: #fff; }
+.ext-tpl-summary {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.ext-prog-summary {
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  margin-bottom: 10px;
+}
+.ext-prog-tag { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; white-space: nowrap; margin-right: 4px; }
+.prog-done { background: rgba(45,125,94,.12); color: #1D6A4F; }
+.prog-doing { background: rgba(193,149,76,.15); color: #8A6A2E; }
+.prog-todo { background: rgba(128,128,128,.1); color: #777; }
+.data-table td.cell-link a { color: var(--c-navy); text-decoration: none; }
+.data-table td.cell-link a:hover { text-decoration: underline; }
+
 .footer {
   padding: 20px 28px;
   text-align: center;
@@ -855,13 +1020,11 @@ body {
       <div class="sub">Annual Report Workbench</div>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item disabled">
+      <div class="nav-item" id="navDownload">
         <i class="icon fa-solid fa-cloud-arrow-down"></i><span>年报下载</span>
-        <span class="badge">待开发</span>
       </div>
-      <div class="nav-item disabled">
+      <div class="nav-item" id="navExtract">
         <i class="icon fa-solid fa-wand-magic-sparkles"></i><span>智能提取</span>
-        <span class="badge">待开发</span>
       </div>
       <div class="nav-item" id="navDatabase">
         <i class="icon fa-solid fa-database"></i><span>数据库</span>
@@ -1047,6 +1210,84 @@ body {
       </div>
     </div>
 
+    <!-- 年报下载 View：92家公司分类总览 + PDF下载状态 -->
+    <div class="page-view" id="downloadView" style="display:none;">
+      <div class="page-header">
+        <h2>年报下载</h2>
+        <span class="page-sub">92 家寿险公司新准则披露情况总览 · PDF 年报下载管理</span>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stat-cards" id="dlStatCards"></div>
+
+      <!-- 筛选栏 -->
+      <div class="dl-controls">
+        <label>公司类型：</label>
+        <select id="dlTypeFilter"><option value="">全部类型</option></select>
+        <label>准则适用：</label>
+        <select id="dlStdFilter"><option value="">全部</option></select>
+        <label>搜索：</label>
+        <input type="text" id="dlSearch" placeholder="公司全称 / 简称关键词">
+        <span class="dl-count" id="dlCount"></span>
+        <button class="btn-reset" id="dlReset">重置</button>
+      </div>
+
+      <div class="dl-note">
+        <i class="fa-solid fa-circle-info" style="font-size:11px;"></i>
+        获取渠道：① 中国保险行业协会年度信息披露栏目（优先）→ ② 各公司官网「公开信息披露」→ 附件。
+        注意区分《年度信息披露报告》(简版，部分无附注) 与《年度财务报表及审计报告》(必须用后者)；命名规范
+        <code>{公司全称}_{年度}年年度报告.pdf</code>，统一放入 pdfs\ 目录。
+      </div>
+
+      <div class="db-card" style="margin-top:10px;">
+        <div class="dl-table-wrap" id="dlTableContainer"></div>
+      </div>
+    </div>
+
+    <!-- 智能提取 View：163行模板 + 提取状态看板 + 勾稽校验 -->
+    <div class="page-view" id="extractView" style="display:none;">
+      <div class="page-header">
+        <h2>智能提取</h2>
+        <span class="page-sub">IFRS17 指标定位表全流程 · 163行模板预览 · 提取进度跟踪</span>
+      </div>
+
+      <!-- 流程步骤条 -->
+      <div class="ext-steps">
+        <div class="ext-step done"><span class="step-no">0</span><span class="step-name">收集PDF</span></div>
+        <div class="ext-step"><span class="step-no">1</span><span class="step-name">PDF文本提取</span></div>
+        <div class="ext-step"><span class="step-no">2</span><span class="step-name">指标模板</span></div>
+        <div class="ext-step"><span class="step-no">3</span><span class="step-name">数据提取+勾稽</span></div>
+        <div class="ext-step"><span class="step-no">4</span><span class="step-name">生成单独版</span></div>
+        <div class="ext-step"><span class="step-no">5</span><span class="step-name">分批合并汇总</span></div>
+      </div>
+
+      <div class="ext-toolbar">
+        <div class="ext-tabs">
+          <button class="ext-tab active" data-tab="template">163行指标模板</button>
+          <button class="ext-tab" data-tab="progress">提取进度</button>
+        </div>
+        <button class="btn-apply" id="btnCopyPrompt" style="width:auto;padding:6px 14px;font-size:12px;">
+          <i class="fa-solid fa-copy" style="font-size:11px;"></i> 复制年度提取指令
+        </button>
+      </div>
+
+      <!-- 模板预览 -->
+      <div class="ext-panel" id="extTemplatePanel">
+        <div class="db-card" style="margin-top:10px;">
+          <div class="ext-tpl-summary" id="extTplSummary"></div>
+          <div class="dl-table-wrap" id="extTplTable"></div>
+        </div>
+      </div>
+
+      <!-- 提取进度看板 -->
+      <div class="ext-panel" id="extProgressPanel" style="display:none;">
+        <div class="ext-prog-summary" id="extProgSummary"></div>
+        <div class="db-card" style="margin-top:10px;">
+          <div class="dl-table-wrap" id="extProgTable"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       保险公司年报分析工作台 v0.8 · 数据来源：上市保险公司年报 · 仅供参考
     </div>
@@ -1058,6 +1299,8 @@ body {
 const COMPANY_TYPES = COMPANIES_DATA.types;
 const TYPE_RULES = COMPANIES_DATA.type_rules;
 const COMPANIES = COMPANIES_DATA.companies;
+// 92家总览的公司类型（按总览顺序去重）
+const COMPANIES_92_TYPES = [...new Set(COMPANIES_92.map(o => o.type))];
 // 报告期从数据库动态提取（保持数据中的原始顺序）
 const REPORT_PERIODS = [...new Set(RAW_DATA.map(r => r['报告期']))];
 
@@ -1083,17 +1326,29 @@ let currentView = 'analysis'; // 'analysis' | 'database'
 let hasApplied = false;
 
 // ============== View Switch ==============
+const VIEW_IDS = ['filterBar', 'selectedSummary', 'chartGrid', 'dbView', 'downloadView', 'extractView'];
 function switchView(view) {
   currentView = view;
+  // 数据分析页显示筛选栏/图表区；其他页隐藏
+  const isAnalysis = view === 'analysis';
   const isDb = view === 'database';
-  document.getElementById('filterBar').style.display = isDb ? 'none' : 'flex';
-  document.getElementById('selectedSummary').style.display = isDb ? 'none' : 'flex';
-  document.getElementById('chartGrid').style.display = isDb ? 'none' : 'grid';
+  const isDownload = view === 'download';
+  const isExtract = view === 'extract';
+  document.getElementById('filterBar').style.display = isAnalysis ? 'flex' : 'none';
+  document.getElementById('selectedSummary').style.display = isAnalysis ? 'flex' : 'none';
+  document.getElementById('chartGrid').style.display = isAnalysis ? 'grid' : 'none';
   document.getElementById('dbView').style.display = isDb ? 'block' : 'none';
-  document.querySelectorAll('.nav-sub').forEach(n => n.style.display = isDb ? 'none' : '');
+  document.getElementById('downloadView').style.display = isDownload ? 'block' : 'none';
+  document.getElementById('extractView').style.display = isExtract ? 'block' : 'none';
+  // 子页面导航只在数据分析页显示
+  document.querySelectorAll('.nav-sub').forEach(n => n.style.display = isAnalysis ? '' : 'none');
+  document.getElementById('navDownload').classList.toggle('active', isDownload);
+  document.getElementById('navExtract').classList.toggle('active', isExtract);
   document.getElementById('navDatabase').classList.toggle('active', isDb);
-  document.getElementById('navAnalysis').classList.toggle('active', !isDb);
+  document.getElementById('navAnalysis').classList.toggle('active', isAnalysis);
   if (isDb) renderDatabase();
+  if (isDownload) renderDownloadView();
+  if (isExtract) renderExtractView();
 }
 
 // ============== Dropdown Logic ==============
@@ -1278,6 +1533,8 @@ function renderSelectedChips() {
 
 // ============== Sidebar Navigation ==============
 function initSidebar() {
+  document.getElementById('navDownload').addEventListener('click', () => switchView('download'));
+  document.getElementById('navExtract').addEventListener('click', () => switchView('extract'));
   document.getElementById('navDatabase').addEventListener('click', () => switchView('database'));
   document.getElementById('navAnalysis').addEventListener('click', () => switchView('analysis'));
   document.querySelectorAll('.nav-sub').forEach(el => {
@@ -1729,11 +1986,27 @@ function buildWaterfallOption(config, companyData) {
         return `${cats[i]}：${v >= 0 && i !== 0 && i !== n - 1 ? '+' : ''}${fmtNum(v)}`;
       }
     },
-    grid: { left: 60, right: 30, top: 24, bottom: 30 },
+    grid: { left: 60, right: 30, top: 24, bottom: 64 },
     xAxis: {
       type: 'category',
       data: cats,
-      axisLabel: { fontSize: 10, color: COLORS.textSecondary, rotate: 30 }
+      axisLabel: {
+        fontSize: 10,
+        color: COLORS.textSecondary,
+        fontStyle: 'normal',   // 明确非斜体（rotate 后的视觉差异与 italic 容易混淆）
+        rotate: 30,
+        interval: 0,           // 强制每个标签都显示
+        margin: 14,            // 标签到x轴的距离
+        lineHeight: 13,
+        // 5个字符以上的标签在中点换行，避免底部被截断
+        formatter: function(v) {
+          if (v.length > 4) {
+            const mid = Math.ceil(v.length / 2);
+            return v.slice(0, mid) + '\n' + v.slice(mid);
+          }
+          return v;
+        }
+      }
     },
     yAxis: { type: 'value', name: config.unit || '亿元', nameTextStyle: { fontSize: 10, color: COLORS.textMuted }, axisLabel: { fontSize: 10 } },
     series: [
@@ -1907,69 +2180,95 @@ function renderPeriodPairStacked(config, data, rp, el) {
   const companies = data.map(d => d.company);
   const inds = config.indicators;
 
-  // 系列：基准期间组（stack 'b'）+ 主期间组（stack 'm'），细项名带期间后缀
-  const sname = (idx, p) => config.displayNames[idx] + '（' + p + '）';
-  const baseSeries = inds.map((ind, idx) => ({
-    name: sname(idx, basePeriod),
-    type: 'bar',
-    stack: 'b',
-    data: companies.map(c => getIndicatorValue(c, ind, basePeriod, rp, config.periodMap))
-  }));
-  const mainSeries = inds.map((ind, idx) => ({
-    name: sname(idx, mainPeriod),
-    type: 'bar',
-    stack: 'm',
-    data: companies.map(c => getIndicatorValue(c, ind, mainPeriod, rp, config.periodMap))
-  }));
-  const series = [...baseSeries, ...mainSeries];
+  // ===== 横轴直接展示期间（期初/期末）：每家公司两个 tick，legend 只保留指标细项 =====
+  const cats = [];
+  companies.forEach(c => { cats.push(c + '\n' + basePeriod); cats.push(c + '\n' + mainPeriod); });
 
-  // 合计数：两组各自 sum
-  const sumOf = (sList, i) => {
+  const val = (c, ind, p) => getIndicatorValue(c, ind, p, rp, config.periodMap);
+
+  // 每个细项一个系列（同一 stack），data 按 公司×期间 展平（2N 个值）
+  const series = inds.map((ind, idx) => ({
+    name: config.displayNames[idx],
+    type: 'bar',
+    stack: 't',
+    data: companies.flatMap(c => [val(c, ind, basePeriod), val(c, ind, mainPeriod)])
+  }));
+
+  // 各 tick 合计
+  const sumAt = i => {
     let t = 0, has = false;
-    sList.forEach(s => {
+    series.forEach(s => {
       const v = s.data[i];
       if (v !== null && v !== undefined && isFinite(Number(v))) { t += Number(v); has = true; }
     });
     return has ? t : null;
   };
-  const baseTotals = companies.map((c, i) => sumOf(baseSeries, i));
-  const mainTotals = companies.map((c, i) => sumOf(mainSeries, i));
+  const totals = cats.map((_, i) => sumAt(i));
 
-  // 合计数增减%标记：位于两组堆叠柱之间的空隙（x=category 中心），垂直在两柱中上部
+  // 合计数增减%（期初→期末），markPoint 显示在期末 tick 柱顶上方
   const deltaPoints = companies.map((c, i) => {
-    const b = baseTotals[i], m = mainTotals[i];
+    const b = totals[i * 2], m = totals[i * 2 + 1];
     if (b === null || b === undefined || m === null || m === undefined || Number(b) === 0) return null;
     const d = (Number(m) - Number(b)) / Math.abs(Number(b));
-    const magMax = Math.max(Math.abs(Number(b)), Math.abs(Number(m)));
-    const y = (Number(b) + Number(m) >= 0 ? 1 : -1) * magMax * 0.5;
     return {
-      coord: [i, y],
+      coord: [i * 2 + 1, m],
       value: `${d >= 0 ? '▲' : '▼'} ${(Math.abs(d) * 100).toFixed(1)}%`,
-      label: { color: d >= 0 ? COLORS.up : COLORS.down, fontSize: 10, fontWeight: 700 }
+      label: { color: d >= 0 ? COLORS.up : COLORS.down, fontSize: 10, fontWeight: 700, position: 'top', distance: 20 }
     };
   }).filter(x => x !== null);
 
-  // 各组堆叠柱顶显示合计值（挂在每组最后一个系列上）
+  // 柱顶合计值（挂在最后一个系列，避免重复；期末柱的增减% markPoint 在其上方）
+  const seriesPct = config.unit === '%';
+  series[series.length - 1].label = {
+    show: true,
+    position: 'top',
+    distance: 4,
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    formatter: p => {
+      const t = totals[p.dataIndex];
+      if (t === null || t === undefined) return '';
+      return seriesPct ? (t * 100).toFixed(1) + '%' : fmtNum(t);
+    }
+  };
   if (deltaPoints.length) {
-    mainSeries[mainSeries.length - 1].markPoint = {
+    series[series.length - 1].markPoint = {
       symbol: 'none',
       data: deltaPoints,
-      label: { show: true, position: 'top', distance: 2 }
+      label: { show: true }
     };
   }
 
-  // 堆叠合计 label（柱顶显示各组合计数值）
-  const seriesPct = config.unit === '%';
-  addStackedTotalLabel(series, seriesPct);
-
-  const legendData = series.map(s => s.name);
   const textStyle = { fontSize: 11, color: COLORS.textPrimary };
   const option = {
     color: COLORS,
-    tooltip: Object.assign({}, TOOLTIP_BASE(), { formatter: stackedTooltipFormatter(config, series) }),
-    legend: { data: legendData, top: 4, itemGap: 18, textStyle },
-    grid: { left: 60, top: 40, bottom: 30, right: 40 },
-    xAxis: { type: 'category', data: companies, axisLabel: { fontSize: 11, color: COLORS.textSecondary, rotate: companies.length > 6 ? 25 : 0 } },
+    tooltip: Object.assign({}, TOOLTIP_BASE(), {
+      formatter: p => {
+        const i = p.dataIndex;
+        const s = series.reduce((acc, s2) => {
+          const v = Number(s2.data[i]);
+          return acc + (isFinite(v) ? v : 0);
+        }, 0);
+        const hasVal = series.some(s2 => s2.data[i] !== null && s2.data[i] !== undefined);
+        if (!hasVal) return cats[i] + '：—';
+        return `${p.seriesName}：${fmtNum(p.value)}<br/>合计：${fmtNum(s)}`;
+      }
+    }),
+    // legend 只显示指标细项（3 项），期间直接在横轴区分
+    legend: { data: config.displayNames, top: 4, itemGap: 18, textStyle },
+    grid: { left: 60, top: 40, bottom: 60, right: 40 },
+    xAxis: {
+      type: 'category',
+      data: cats,
+      axisLabel: {
+        fontSize: 10,
+        color: COLORS.textSecondary,
+        interval: 0,
+        rotate: companies.length > 4 ? 30 : 0,
+        lineHeight: 13,
+        margin: 14
+      }
+    },
     yAxis: getYAxis(config, false).map(y => ({
       ...y,
       nameTextStyle: { fontSize: 10, color: COLORS.textMuted },
@@ -2407,7 +2706,7 @@ function renderDatabase() {
     return (a['期间'] || '').localeCompare(b['期间'] || '');
   });
 
-  document.getElementById('dbInfo').textContent = `共 ${rows.length} 行数据（当前数据库：17家公司 · ${RAW_DATA.length}行 · 81个指标）`;
+  document.getElementById('dbInfo').textContent = `共 ${rows.length} 行数据（当前数据库：37家公司 · ${RAW_DATA.length}行 · 81个指标）`;
 
   if (rows.length === 0) {
     document.getElementById('dbTableContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--c-text-muted);">没有匹配的数据</div>';
@@ -2460,6 +2759,199 @@ function renderDatabase() {
       <table class="data-table db-table">
         <thead><tr>${thead}</tr></thead>
         <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ============== 年报下载 View（92家总览 + PDF状态） ==============
+const STD_CLASS = {'新准则': 'std-new', '旧准则': 'std-old', '暂缓披露': 'std-delay', '不适用': 'std-na'};
+let dlState = {type: '', std: '', search: ''};
+
+function initDownloadView() {
+  const typeSel = document.getElementById('dlTypeFilter');
+  typeSel.innerHTML = '<option value="">全部类型</option>' +
+    COMPANIES_92_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+  const stdSel = document.getElementById('dlStdFilter');
+  stdSel.innerHTML = '<option value="">全部</option>' +
+    ['新准则', '旧准则', '暂缓披露', '不适用'].map(s => `<option value="${s}">${s}</option>`).join('');
+  typeSel.addEventListener('change', () => { dlState.type = typeSel.value; renderDownloadView(); });
+  stdSel.addEventListener('change', () => { dlState.std = stdSel.value; renderDownloadView(); });
+  document.getElementById('dlSearch').addEventListener('input', e => {
+    dlState.search = e.target.value.trim(); renderDownloadView();
+  });
+  document.getElementById('dlReset').addEventListener('click', () => {
+    dlState = {type: '', std: '', search: ''};
+    typeSel.value = ''; stdSel.value = ''; document.getElementById('dlSearch').value = '';
+    renderDownloadView();
+  });
+  // PDF 状态点击
+  document.getElementById('dlTableContainer').addEventListener('click', e => {
+    const btn = e.target.closest('.pdf-btn');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    const store = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
+    if (store[name]) delete store[name]; else store[name] = 1;
+    localStorage.setItem('dl_pdf_status', JSON.stringify(store));
+    renderDownloadView();
+  });
+}
+
+function renderDownloadView() {
+  const list = COMPANIES_92.filter(o => {
+    if (dlState.type && o.type !== dlState.type) return false;
+    if (dlState.std && o.standard !== dlState.std) return false;
+    if (dlState.search && !o.full_name.includes(dlState.search)) return false;
+    return true;
+  });
+  // 统计卡片
+  const cnt = v => COMPANIES_92.filter(o => o.standard === v).length;
+  document.getElementById('dlStatCards').innerHTML = `
+    <div class="stat-card"><div class="num">${COMPANIES_92.length}</div><div class="lbl">公司总数</div></div>
+    <div class="stat-card"><div class="num" style="color:#1D6A4F;">${cnt('新准则')}</div><div class="lbl">新准则</div></div>
+    <div class="stat-card"><div class="num" style="color:#9B3A3A;">${cnt('旧准则')}</div><div class="lbl">旧准则</div></div>
+    <div class="stat-card"><div class="num" style="color:#8A6A2E;">${cnt('暂缓披露')}</div><div class="lbl">暂缓披露</div></div>
+    <div class="stat-card"><div class="num" style="color:#777;">${cnt('不适用')}</div><div class="lbl">不适用</div></div>
+    <div class="stat-card"><div class="num" style="color:#2B4C6F;">${COMPANIES_92.filter(o => o.first_year).length}</div><div class="lbl">已发布新准则年报</div></div>
+  `;
+  document.getElementById('dlCount').textContent = `共 ${list.length} / ${COMPANIES_92.length} 家`;
+  if (list.length === 0) {
+    document.getElementById('dlTableContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--c-text-muted);">没有匹配的公司</div>';
+    return;
+  }
+  const store = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
+  const rows = list.map(o => {
+    const stdCls = STD_CLASS[o.standard] || '';
+    const firstYear = o.first_year || '—';
+    const pdfDone = !!store[o.full_name];
+    return `<tr>
+      <td style="text-align:center;color:var(--c-text-muted);">${o.seq}</td>
+      <td class="cell-link">${o.full_name}</td>
+      <td class="cell-link">${o.url ? `<a class="dl-link" href="${o.url}" target="_blank" rel="noopener">${o.url.replace(/^https?:\/\//, '')}</a>` : '—'}</td>
+      <td style="text-align:center;white-space:nowrap;">${o.type}</td>
+      <td style="text-align:center;"><span class="std-tag ${stdCls}">${o.standard}</span></td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;">${firstYear}</td>
+      <td style="text-align:center;"><button class="pdf-btn ${pdfDone ? 'done' : ''}" data-name="${o.full_name}">${pdfDone ? '✓ 已下载' : '未下载'}</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('dlTableContainer').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table db-table" style="min-width:820px;">
+        <thead><tr>
+          <th style="width:50px;">序号</th><th>公司名称</th><th>官网地址</th><th>公司类型</th>
+          <th>准则适用</th><th>首次发布新准则财报年份</th><th>PDF</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ============== 智能提取 View（163模板 + 进度看板） ==============
+const EXTRACT_STAGES = [
+  {key: 'pdf', label: 'PDF已备', cls: 'prog-doing'},
+  {key: 'text', label: '文本已提取', cls: 'prog-doing'},
+  {key: 'data', label: '数据已提取', cls: 'prog-doing'},
+  {key: 'check', label: '勾稽已通过', cls: 'prog-doing'},
+  {key: 'done', label: '已入库', cls: 'prog-done'}
+];
+
+function initExtractView() {
+  document.querySelectorAll('.ext-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ext-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const isTpl = tab.dataset.tab === 'template';
+      document.getElementById('extTemplatePanel').style.display = isTpl ? '' : 'none';
+      document.getElementById('extProgressPanel').style.display = isTpl ? 'none' : '';
+    });
+  });
+  document.getElementById('btnCopyPrompt').addEventListener('click', () => {
+    const year = String(REPORT_PERIODS[REPORT_PERIODS.length - 1] || '2025年度').match(/(\d{4})/);
+    const yr = year ? year[1] : '2025';
+    const nxtYear = (parseInt(yr) + 1).toString();
+    const prompt = `【任务】生成全部新准则保险公司${nxtYear}年度年报的IFRS17指标定位表及汇总。
+【背景】先读《险企IFRS17指标定位表_全流程操作手册》，严格按流程执行：
+Step0 收集《年度财务报表及审计报告》PDF（渠道：行业协会年度信息披露→各公司官网；命名 pdfs\\{公司}_${nxtYear}年年度报告.pdf）。公司清单以当年《92家公司总览》"准则适用=新准则"列为准；
+Step1 fitz提取全文到 pdf_extracts\\{公司}_full.txt（带PDF_PAGE_N标记）；
+Step2 复用 _template_163.json 模板；
+Step3 每家公司派1个并行子代理提取T01-T10，多列大表用get_text('words')坐标重建，勾稽验证（利润总额+所得税=净利润、LC/CSM调节）通过才继续；
+Step4 按骨架生成 generate_{公司}_v1.py，每家验证163行；
+Step5 分批合并后生成汇总工作簿（Sheet1美化总览+Sheet2全部新准则公司N×163行）；
+Step6 全程遵守期间枚举规范（仅 本期/上期/本期初/本期末/上期初/上期末，无裸期初/期末）。
+【交付】文件名带版本号；勾稽验证后交付；修改前备份。`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(prompt).then(() => showToast('指令已复制，可粘贴给 AI 工具执行'));
+    } else {
+      showToast('复制失败，请手动复制');
+    }
+  });
+  // 进度状态点击
+  document.getElementById('extProgTable').addEventListener('click', e => {
+    const btn = e.target.closest('.ext-stage-btn');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    const stage = btn.dataset.stage;
+    const store = JSON.parse(localStorage.getItem('ext_status') || '{}');
+    store[name] = (store[name] === stage) ? '' : stage;
+    localStorage.setItem('ext_status', JSON.stringify(store));
+    renderExtractView();
+  });
+}
+
+function renderExtractView() {
+  // 模板摘要
+  const tpl = TEMPLATE_163 || [];
+  const reports = {};
+  tpl.forEach(r => {
+    const t = r[3]; // T01...
+    reports[t] = reports[t] || {name: r[4], count: 0, codes: new Set()};
+    reports[t].count++;
+    reports[t].codes.add(r[5]);
+  });
+  const tplKeys = Object.keys(reports).sort();
+  document.getElementById('extTplSummary').innerHTML =
+    `163行指标模板 · ${tplKeys.length} 张报表（${tplKeys.map(k => `${k} ${reports[k].name} ${reports[k].count}行`).join('；')}）· 期间枚举规范：本期/上期/本期初/本期末/上期初/上期末` +
+    '<br/>模板示例公司：' + (tpl[0] ? tpl[0][1] : '') + ' ' + (tpl[0] ? tpl[0][2] : '');
+
+  // 模板表格（按报表分组）
+  const tbody = tplKeys.map(t => {
+    const rows = tpl.filter(r => r[3] === t).map(r => `<tr>
+      <td style="text-align:center;">${r[5]}</td>
+      <td>${r[6]}</td>
+      <td class="col-src" style="min-width:180px;white-space:normal;">${r[7]}</td>
+      <td style="text-align:center;white-space:nowrap;">${r[9]}</td>
+      <td style="text-align:center;">${r[10]} → ${r[11]}</td>
+    </tr>`).join('');
+    return `<tr class="tpl-group"><td colspan="5" style="background:var(--c-navy-light);font-weight:700;color:var(--c-navy);">${t} · ${reports[t].name}（${reports[t].count}行）</td></tr>${rows}`;
+  }).join('');
+  document.getElementById('extTplTable').innerHTML = `
+    <div class="data-table-wrap" style="max-height:520px;">
+      <table class="data-table db-table" style="min-width:760px;">
+        <thead><tr><th style="width:70px;">指标编号</th><th>指标名称</th><th>指标来源</th><th>期间</th><th>计量单位</th></tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  `;
+
+  // 进度看板
+  const dbNames = [...new Set(RAW_DATA.map(r => r['公司名称']))];
+  const store = JSON.parse(localStorage.getItem('ext_status') || '{}');
+  const doneCount = dbNames.filter(n => !store[n] || store[n] === 'done').length;
+  document.getElementById('extProgSummary').innerHTML =
+    `数据库已有 <b>${dbNames.length}</b> 家公司完成提取并入库；点击行内按钮可标记各公司提取阶段（localStorage 本地保存）。`;
+  const rows = dbNames.map(name => {
+    const cur = store[name] || 'done'; // 默认已入库（数据已在数据库）
+    const btns = EXTRACT_STAGES.map(s =>
+      `<button class="ext-stage-btn ${s.cls}" data-name="${name}" data-stage="${s.key}" style="${cur === s.key ? 'box-shadow:0 0 0 2px var(--c-navy);' : ''}">${s.label}</button>`
+    ).join('');
+    return `<tr><td>${name}</td><td style="text-align:left;white-space:nowrap;">${btns}</td></tr>`;
+  }).join('');
+  document.getElementById('extProgTable').innerHTML = `
+    <div class="data-table-wrap" style="max-height:480px;">
+      <table class="data-table db-table" style="min-width:680px;">
+        <thead><tr><th style="width:160px;">公司</th><th>提取阶段</th></tr></thead>
+        <tbody>${rows}</tbody>
       </table>
     </div>
   `;
@@ -2528,39 +3020,103 @@ function applyTheme(theme) {
 }
 
 // ============== Chart Export ==============
-function getChartInstance(id) {
-  const el = document.getElementById(id);
-  if (!el) return null;
-  const direct = echarts.getInstanceByDom(el);
-  if (direct) return direct;
-  // 瀑布图：多个子实例，取第一个
-  if (el._wfInstances && el._wfInstances.length) return el._wfInstances[0];
-  return null;
+// 合并瀑布图的所有子 echarts 实例到一张大图（解决之前只导出第一个公司的问题）
+async function getWaterfallCombinedDataURL(container, bgColor) {
+  const instances = container._wfInstances || [];
+  if (instances.length === 0) return null;
+
+  // 容器实际占用尺寸（可能因多公司瀑布块垂直堆叠被撑高，超出原 clientHeight）
+  const totalWidth = container.clientWidth;
+  const totalHeight = Math.max(container.scrollHeight, container.clientHeight);
+  if (!totalWidth || !totalHeight) return null;
+
+  const ratio = window.devicePixelRatio || 2;
+  const containerRect = container.getBoundingClientRect();
+
+  // 1) 预生成每个子实例的 dataURL（包含该实例所在容器块的渲染）
+  const imgs = await Promise.all(instances.map(inst => new Promise(resolve => {
+    const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bgColor });
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  })));
+
+  // 2) 创建合并 canvas，按子块在容器中的实际位置拼接
+  const out = document.createElement('canvas');
+  out.width = totalWidth * ratio;
+  out.height = totalHeight * ratio;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = bgColor || '#FFFFFF';
+  ctx.fillRect(0, 0, out.width, out.height);
+
+  instances.forEach((inst, i) => {
+    const img = imgs[i];
+    if (!img) return;
+    // 子实例的 DOM 父节点 = 包含「公司标题 + 图表」的整体块
+    const blockEl = inst.getDom().parentElement;
+    if (!blockEl) return;
+    const r = blockEl.getBoundingClientRect();
+    const dx = (r.left - containerRect.left) * ratio;
+    const dy = (r.top - containerRect.top) * ratio;
+    const dw = r.width * ratio;
+    const dh = r.height * ratio;
+    ctx.drawImage(img, dx, dy, dw, dh);
+  });
+
+  return out.toDataURL('image/png');
 }
 
-function exportChartAsPng(chartId) {
-  const inst = getChartInstance(chartId);
+async function exportChartAsPng(chartId) {
+  const el = document.getElementById(chartId);
+  if (!el) { showToast('图表未渲染'); return; }
+  const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--c-surface').trim() || '#FFFFFF';
+
+  // 瀑布图：合并所有子实例导出
+  if (el._wfInstances && el._wfInstances.length) {
+    try {
+      const url = await getWaterfallCombinedDataURL(el, bgColor);
+      if (!url) { showToast('图表未渲染'); return; }
+      const link = document.createElement('a');
+      link.download = `${chartId}_${Date.now()}.png`;
+      link.href = url;
+      link.click();
+    } catch (err) {
+      console.error('瀑布图导出失败', err);
+      showToast('导出失败');
+    }
+    return;
+  }
+
+  const inst = echarts.getInstanceByDom(el);
   if (!inst) { showToast('图表未渲染'); return; }
-  const url = inst.getDataURL({
-    type: 'png',
-    pixelRatio: 2,
-    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--c-surface').trim()
-  });
+  const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bgColor });
   const link = document.createElement('a');
-  link.download = `${chartId}_${new Date().getTime()}.png`;
+  link.download = `${chartId}_${Date.now()}.png`;
   link.href = url;
   link.click();
 }
 
 async function copyChartToClipboard(chartId) {
-  const inst = getChartInstance(chartId);
-  if (!inst) { showToast('图表未渲染'); return; }
+  const el = document.getElementById(chartId);
+  if (!el) { showToast('图表未渲染'); return; }
+  const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--c-surface').trim() || '#FFFFFF';
+
   try {
-    const url = inst.getDataURL({type: 'png', pixelRatio: 2});
+    let url;
+    if (el._wfInstances && el._wfInstances.length) {
+      url = await getWaterfallCombinedDataURL(el, bgColor);
+    } else {
+      const inst = echarts.getInstanceByDom(el);
+      if (!inst) { showToast('图表未渲染'); return; }
+      url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bgColor });
+    }
+    if (!url) { showToast('图表未渲染'); return; }
     const blob = await (await fetch(url)).blob();
-    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     showToast('已复制到剪贴板');
   } catch (err) {
+    console.error('复制失败', err);
     showToast('复制失败，请右键图片手动复制');
   }
 }
@@ -2604,6 +3160,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initSidebar();
   initDbFilters();
+  initDownloadView();
+  initExtractView();
 
   document.getElementById('companySearch').addEventListener('input', e => {
     renderCompanyGroups(e.target.value);
