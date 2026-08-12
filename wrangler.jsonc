@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "insurance-annual-report",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    { "binding": "STORE", "bucket_name": "insurance-annual-report" }
+  ],
+  "vars": {
+    "DB_KEY": "raw_data.json",
+    "TPL_KEY": "template_163.json",
+    "PDF_PREFIX": "pdfs/",
+    "STATUS_KEY": "status.json",
+    "SOURCES_KEY": "sources.json"
+  }
+}

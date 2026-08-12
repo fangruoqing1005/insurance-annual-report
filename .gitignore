@@ -2,3 +2,5 @@ node_modules/
 *.pyc
 database.json
 .workbuddy/
+.wrangler/
+.dev.vars

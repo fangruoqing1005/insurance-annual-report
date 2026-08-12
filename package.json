@@ -1,0 +1,13 @@
+{
+  "name": "insurance-annual-report",
+  "version": "4.0.0",
+  "private": true,
+  "description": "保险公司年报分析工作台 - Cloudflare Pages + Functions 后端",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "deploy": "wrangler pages deploy"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.4.168"
+  }
+}

@@ -992,6 +992,103 @@ body {
 .prog-todo { background: rgba(128,128,128,.1); color: #777; }
 .data-table td.cell-link a { color: var(--c-navy); text-decoration: none; }
 .data-table td.cell-link a:hover { text-decoration: underline; }
+/* 云模式操作区 */
+.cloud-only { transition: opacity .2s; }
+.cloud-only.disabled-cloud { opacity: .45; pointer-events: none; }
+.dl-ops {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dl-ops-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dl-ops-left label { font-size: 12px; color: var(--c-text-secondary); white-space: nowrap; }
+.dl-ops-left input[type="text"], .dl-ops-left select {
+  padding: 5px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+  outline: none;
+}
+.dl-ops-status { font-size: 12px; color: var(--c-text-secondary); max-width: 420px; line-height: 1.7; }
+.dl-ops-status .ok { color: #1D6A4F; }
+.dl-ops-status .err { color: #9B3A3A; }
+/* 数据库管理 */
+.db-mgmt { border-top: 1px solid var(--c-border); padding-top: 14px; }
+.db-mgmt-title { font-size: 14px; font-weight: 700; color: var(--c-navy); margin-bottom: 10px; }
+.db-mgmt-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.db-mgmt-box {
+  flex: 1;
+  min-width: 320px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+.db-mgmt-box-title { font-size: 12px; font-weight: 700; color: var(--c-text-primary); margin-bottom: 8px; }
+.db-mgmt-fields { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--c-text-secondary); }
+.db-mgmt-fields select, .db-mgmt-fields input[type="text"] {
+  padding: 4px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+  outline: none;
+}
+.db-mgmt-fields select[size] { min-width: 160px; }
+.db-mgmt-fields label { white-space: nowrap; }
+.btn-danger {
+  margin-top: 10px;
+  border: 1px solid #B83A3A;
+  background: #fff;
+  color: #B83A3A;
+  border-radius: 3px;
+  padding: 5px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #B83A3A; color: #fff; }
+.db-mgmt-status { margin-top: 10px; font-size: 12px; color: var(--c-text-secondary); line-height: 1.7; }
+.db-mgmt-status .ok { color: #1D6A4F; }
+.db-mgmt-status .err { color: #9B3A3A; }
+/* 模板管理 */
+.ext-tpl-mgmt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--c-navy-light);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ext-tpl-mgmt .tpl-version { font-size: 11px; color: var(--c-text-muted); }
+.ext-panel table { border-collapse: collapse; width: 100%; }
+.ext-panel .tpl-group td { text-align: left !important; padding: 6px 10px; }
+.ext-stage-btn {
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 4px;
+  background: var(--c-surface);
+  color: var(--c-text-secondary);
+}
+.ext-stage-btn:hover { border-color: var(--c-navy); color: var(--c-navy); }
+.ext-stage-btn.prog-done { background: rgba(45,125,94,.1); border-color: rgba(45,125,94,.4); color: #1D6A4F; }
 
 .footer {
   padding: 20px 28px;
@@ -1208,6 +1305,40 @@ body {
       <div class="db-card">
         <div id="dbTableContainer"></div>
       </div>
+
+      <!-- 数据管理（云模式）：范围删除 + 上传导入 -->
+      <div class="db-mgmt cloud-only" id="dbMgmt" style="display:none;margin-top:16px;">
+        <div class="db-mgmt-title">
+          <i class="fa-solid fa-sliders" style="font-size:12px;"></i> 数据管理
+          <span style="font-weight:400;font-size:11px;color:var(--c-text-muted);margin-left:8px;">（需部署到 Cloudflare；删除/上传后数据库页与分析图表立即生效）</span>
+        </div>
+        <div class="db-mgmt-row">
+          <div class="db-mgmt-box">
+            <div class="db-mgmt-box-title">删除数据（按公司/报告期/指标，任一命中即删）</div>
+            <div class="db-mgmt-fields">
+              <label>公司：</label>
+              <select id="mgmtCompany" multiple size="4"></select>
+              <label>报告期：</label>
+              <select id="mgmtPeriod"><option value="">全部</option></select>
+              <label>指标编号：</label>
+              <input type="text" id="mgmtCodes" placeholder="如 D10 / D10,D07" style="width:110px;">
+            </div>
+            <button class="btn-danger cloud-only" id="btnDeleteData">删除所选数据</button>
+          </div>
+          <div class="db-mgmt-box">
+            <div class="db-mgmt-box-title">上传导入（JSON 增量合并，支持数据库页导出格式）</div>
+            <div class="db-mgmt-fields">
+              <label>选择 JSON 文件：</label>
+              <input type="file" id="mgmtFile" accept=".json,.txt" style="font-size:11px;">
+              <button class="btn-apply cloud-only" id="btnUploadData" style="width:auto;padding:5px 12px;font-size:12px;">上传并合并</button>
+            </div>
+            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;">
+              文件格式：<code>{ "rows": [ {...17列行对象...}, ... ] }</code>，或直接是一个行对象数组；按 公司+报告期+指标编号+期间 增量覆盖。
+            </div>
+          </div>
+        </div>
+        <div class="db-mgmt-status" id="dbMgmtStatus"></div>
+      </div>
     </div>
 
     <!-- 年报下载 View：92家公司分类总览 + PDF下载状态 -->
@@ -1237,6 +1368,28 @@ body {
         获取渠道：① 中国保险行业协会年度信息披露栏目（优先）→ ② 各公司官网「公开信息披露」→ 附件。
         注意区分《年度信息披露报告》(简版，部分无附注) 与《年度财务报表及审计报告》(必须用后者)；命名规范
         <code>{公司全称}_{年度}年年度报告.pdf</code>，统一放入 pdfs\ 目录。
+        <span class="cloud-only" style="margin-left:6px;">部署到 Cloudflare 后，可直接在下方对公司执行 <b>下载/上传 PDF → AI 提取 → 入库</b>。</span>
+      </div>
+
+      <!-- 云模式操作区 -->
+      <div class="dl-ops cloud-only" id="dlOps" style="display:none;">
+        <div class="dl-ops-left">
+          <label>目标公司：</label>
+          <input type="text" id="dlTargetCompany" placeholder="如 中国人寿" style="width:140px;">
+          <label>报告期：</label>
+          <select id="dlTargetYear"></select>
+          <button class="btn-apply cloud-only" id="btnDownloadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
+            <i class="fa-solid fa-download" style="font-size:11px;"></i> 下载 PDF
+          </button>
+          <button class="btn-apply cloud-only" id="btnUploadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
+            <i class="fa-solid fa-upload" style="font-size:11px;"></i> 上传 PDF
+          </button>
+          <button class="btn-apply cloud-only" id="btnAiExtract" style="width:auto;padding:6px 14px;font-size:12px;background:#1D6A4F;">
+            <i class="fa-solid fa-wand-magic-sparkles" style="font-size:11px;"></i> AI 提取入库
+          </button>
+          <input type="file" id="dlPdfFile" accept=".pdf" style="display:none;">
+        </div>
+        <div class="dl-ops-status" id="dlOpsStatus"></div>
       </div>
 
       <div class="db-card" style="margin-top:10px;">
@@ -1259,6 +1412,19 @@ body {
         <div class="ext-step"><span class="step-no">3</span><span class="step-name">数据提取+勾稽</span></div>
         <div class="ext-step"><span class="step-no">4</span><span class="step-name">生成单独版</span></div>
         <div class="ext-step"><span class="step-no">5</span><span class="step-name">分批合并汇总</span></div>
+      </div>
+
+      <!-- 模板管理（云模式）：下载当前 / 上传覆盖 -->
+      <div class="ext-tpl-mgmt cloud-only" id="extTplMgmt" style="display:none;">
+        <span style="font-size:12px;color:var(--c-text-secondary);">163 行指标模板管理：</span>
+        <button class="btn-apply cloud-only" id="btnTplDownload" style="width:auto;padding:5px 12px;font-size:12px;">
+          <i class="fa-solid fa-download" style="font-size:11px;"></i> 下载当前模板
+        </button>
+        <button class="btn-apply cloud-only" id="btnTplUpload" style="width:auto;padding:5px 12px;font-size:12px;">
+          <i class="fa-solid fa-upload" style="font-size:11px;"></i> 上传新模板覆盖
+        </button>
+        <input type="file" id="tplFile" accept=".json" style="display:none;">
+        <span class="tpl-version" id="tplVersion"></span>
       </div>
 
       <div class="ext-toolbar">
@@ -1301,11 +1467,80 @@ const TYPE_RULES = COMPANIES_DATA.type_rules;
 const COMPANIES = COMPANIES_DATA.companies;
 // 92家总览的公司类型（按总览顺序去重）
 const COMPANIES_92_TYPES = [...new Set(COMPANIES_92.map(o => o.type))];
-// 报告期从数据库动态提取（保持数据中的原始顺序）
-const REPORT_PERIODS = [...new Set(RAW_DATA.map(r => r['报告期']))];
+// 报告期从数据库动态提取（保持数据中的原始顺序；云模式下会被 /api/data 覆盖）
+let REPORT_PERIODS = [...new Set(RAW_DATA.map(r => r['报告期']))];
 
 const SHORT_TO_FULL = {};
 COMPANIES.forEach(c => { SHORT_TO_FULL[c.short_name] = c.full_name; });
+
+// ============== Cloud API 层（Cloudflare Pages Functions） ==============
+// 纯静态部署（GitHub Pages）时这些接口不可用 → isCloudMode=false，执行按钮禁用
+let isCloudMode = false;
+let cloudDataLoaded = false;
+
+// 管理密码：首次使用输入后存 localStorage，请求带 X-Admin-Token
+function getAdminToken() {
+  return localStorage.getItem('admin_token') || '';
+}
+function setAdminToken(t) {
+  localStorage.setItem('admin_token', t);
+}
+
+async function apiFetch(path, { method = 'GET', body } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getAdminToken();
+  if (token) headers['X-Admin-Token'] = token;
+  const resp = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let data = null;
+  try { data = await resp.json(); } catch (e) {}
+  return { resp, data };
+}
+
+// 云模式探测 + 动态数据加载（提取入库后刷新即生效）
+async function initCloudMode() {
+  try {
+    const { resp, data } = await apiFetch('/api/data');
+    if (resp.ok && data && Array.isArray(data.rows)) {
+      isCloudMode = true;
+      applyCloudData(data.rows);
+    }
+  } catch (e) {
+    // 静态模式：接口 404/不可达
+  }
+  syncCloudUI();
+}
+
+function applyCloudData(rows) {
+  RAW_DATA = rows;
+  REPORT_PERIODS = [...new Set(RAW_DATA.map(r => r['报告期']))];
+  // 重算 has_data（动态数据库可能增删公司）
+  const dbCompanies = new Set(RAW_DATA.map(r => r['公司名称']));
+  COMPANIES.forEach(c => { c.has_data = dbCompanies.has(c.short_name); });
+  cloudDataLoaded = true;
+  // 刷新数据管理下拉（云模式）
+  const compSel = document.getElementById('mgmtCompany');
+  if (compSel) {
+    compSel.innerHTML = [...new Set(RAW_DATA.map(r => r['公司名称']))].sort()
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+  const perSel = document.getElementById('mgmtPeriod');
+  if (perSel) {
+    perSel.innerHTML = '<option value="">全部报告期</option>' +
+      [...new Set(RAW_DATA.map(r => r['报告期']))].map(p => `<option value="${p}">${p}</option>`).join('');
+  }
+  // 刷新数据库页与图表
+  if (currentView === 'database') renderDatabase();
+  else if (currentView === 'analysis' && hasApplied) renderCharts();
+}
+
+// 云/静态模式 UI 同步（禁用无后端能力的按钮）
+function syncCloudUI() {
+  const disable = !isCloudMode;
+  document.querySelectorAll('.cloud-only').forEach(el => {
+    el.classList.toggle('disabled-cloud', disable);
+    el.title = disable ? '需要部署到 Cloudflare 后可用' : el.title;
+  });
+}
 
 // 标准化说明（指标编号 → 标准化目标符号说明）
 const STD_NOTES = {
@@ -1346,6 +1581,11 @@ function switchView(view) {
   document.getElementById('navExtract').classList.toggle('active', isExtract);
   document.getElementById('navDatabase').classList.toggle('active', isDb);
   document.getElementById('navAnalysis').classList.toggle('active', isAnalysis);
+  // 云模式专属区域显隐
+  const cloudOn = isCloudMode;
+  document.getElementById('dlOps').style.display = cloudOn && isDownload ? '' : 'none';
+  document.getElementById('dbMgmt').style.display = cloudOn && isDb ? '' : 'none';
+  document.getElementById('extTplMgmt').style.display = cloudOn && isExtract ? '' : 'none';
   if (isDb) renderDatabase();
   if (isDownload) renderDownloadView();
   if (isExtract) renderExtractView();
@@ -2795,6 +3035,107 @@ function initDownloadView() {
     localStorage.setItem('dl_pdf_status', JSON.stringify(store));
     renderDownloadView();
   });
+
+  // ===== 云模式操作区 =====
+  const yearSel = document.getElementById('dlTargetYear');
+  const fillYears = () => {
+    const years = REPORT_PERIODS.length ? REPORT_PERIODS : ['2025年度'];
+    yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  };
+  fillYears();
+
+  const opsStatus = document.getElementById('dlOpsStatus');
+  const setOps = (html, cls) => { opsStatus.innerHTML = html; opsStatus.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
+  const getTarget = () => ({ company: document.getElementById('dlTargetCompany').value.trim(), year: yearSel.value });
+
+  // 下载 PDF（自动抓取 sources.json 映射；未配置则提示上传）
+  document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+    const { company, year } = getTarget();
+    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
+    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    setOps(`正在尝试下载 ${company} ${year} 的 PDF…`);
+    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year } });
+    if (resp.ok && data.ok && data.needUpload) {
+      setOps(`未配置 ${company} 的自动下载地址，请手动下载后点「上传 PDF」提交文件。`);
+    } else if (resp.ok && data.ok) {
+      setOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）`, 'ok');
+      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+      renderDownloadView();
+    } else {
+      setOps(`下载失败：${(data && data.error) || '未知错误'}`, 'err');
+    }
+  });
+
+  // 上传 PDF
+  document.getElementById('btnUploadPdf').addEventListener('click', () => {
+    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    document.getElementById('dlPdfFile').click();
+  });
+  document.getElementById('dlPdfFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const { company, year } = getTarget();
+    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
+    setOps(`正在上传 ${file.name}（${(file.size / 1024).toFixed(0)} KB）…`);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('company', company);
+    fd.append('year', year);
+    const token = getAdminToken();
+    const resp = await fetch('/api/download', {
+      method: 'POST',
+      headers: token ? { 'X-Admin-Token': token } : {},
+      body: fd
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      setOps(`上传成功：${data.pdfKey}，可执行「AI 提取入库」`, 'ok');
+      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+      renderDownloadView();
+    } else {
+      setOps(`上传失败：${(data && data.error) || resp.status}`, 'err');
+    }
+    e.target.value = '';
+  });
+
+  // AI 提取入库
+  document.getElementById('btnAiExtract').addEventListener('click', async () => {
+    const { company, year } = getTarget();
+    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
+    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    const full = COMPANIES_92.find(o => o.full_name.includes(company) || o.full_name === company);
+    const companyType = full ? full.type : '';
+    setOps(`正在 AI 提取 ${company} ${year} 的 163 行指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
+    const { resp, data } = await apiFetch('/api/extract', {
+      method: 'POST',
+      body: { company, year, companyType }
+    });
+    if (resp.ok && data.ok) {
+      const checkSummary = (data.checks || []).map(c => c.pass === null ? `${c.name}跳过` : (c.pass ? `${c.name}✓` : `${c.name}✗`)).join(' | ');
+      const susp = (data.suspicious || []).length;
+      let html = `提取完成：新增 ${data.rowsAdded} 行，勾稽：${checkSummary}。数据库现有 ${data.dbRows} 行。`;
+      if (susp) html += `<br/><span class="err">⚠ ${susp} 项行名可疑（${data.suspicious.map(s => s.code + ':' + s.指标名称).join('、')}），请到数据库页核对</span>`;
+      if ((data.checks || []).some(c => c.pass === false)) html += `<br/><span class="err">⚠ 存在未通过的勾稽项，请人工核查</span>`;
+      setOps(html, data.rowsAdded ? 'ok' : '');
+      // 刷新动态数据（云模式）
+      await refreshCloudData();
+    } else {
+      setOps(`提取失败：${(data && data.error) || '未知错误'}`, 'err');
+    }
+  });
+}
+
+// 云模式刷新数据
+async function refreshCloudData() {
+  try {
+    const { resp, data } = await apiFetch('/api/data');
+    if (resp.ok && data && Array.isArray(data.rows)) {
+      applyCloudData(data.rows);
+      renderDownloadView();
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 
 function renderDownloadView() {
@@ -2897,6 +3238,107 @@ Step6 全程遵守期间枚举规范（仅 本期/上期/本期初/本期末/上
     localStorage.setItem('ext_status', JSON.stringify(store));
     renderExtractView();
   });
+
+  // ===== 模板管理（云模式）=====
+  const tplVersion = document.getElementById('tplVersion');
+  document.getElementById('btnTplDownload').addEventListener('click', async () => {
+    const { resp, data } = await apiFetch('/api/template');
+    if (resp.ok && data.ok) {
+      const blob = new Blob([JSON.stringify(data.template, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.download = 'template_163.json';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      tplVersion.textContent = `当前模板 ${data.count} 行（已下载）`;
+      showToast('模板已下载');
+    } else {
+      showToast('下载失败：' + ((data && data.error) || '未知错误'));
+    }
+  });
+  document.getElementById('btnTplUpload').addEventListener('click', () => document.getElementById('tplFile').click());
+  document.getElementById('tplFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed) || parsed.length < 10) throw new Error('模板必须是数组（163行）');
+      const { resp, data } = await apiFetch('/api/template', { method: 'POST', body: { template: parsed } });
+      if (resp.ok && data.ok) {
+        tplVersion.textContent = `已上传新模板 ${data.count} 行，下次提取生效`;
+        showToast('模板已更新');
+      } else {
+        showToast('上传失败：' + ((data && data.error) || '未知错误'));
+      }
+    } catch (err) {
+      showToast('文件解析失败：' + err.message);
+    }
+    e.target.value = '';
+  });
+}
+
+// ============== 数据库管理（云模式）：范围删除 + 上传导入 ==============
+function initDbMgmt() {
+  const compSel = document.getElementById('mgmtCompany');
+  const perSel = document.getElementById('mgmtPeriod');
+  const fillOptions = () => {
+    compSel.innerHTML = [...new Set(RAW_DATA.map(r => r['公司名称']))].sort()
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+    const rps = [...new Set(RAW_DATA.map(r => r['报告期']))];
+    perSel.innerHTML = '<option value="">全部报告期</option>' + rps.map(p => `<option value="${p}">${p}</option>`).join('');
+  };
+  fillOptions();
+
+  document.getElementById('btnDeleteData').addEventListener('click', async () => {
+    if (!isCloudMode) { setDbMgmtStatus('需部署到 Cloudflare 后可用', 'err'); return; }
+    const companies = [...compSel.selectedOptions].map(o => o.value);
+    const periods = perSel.value ? [perSel.value] : [];
+    const codes = document.getElementById('mgmtCodes').value.split(/[,，\s]+/).filter(Boolean);
+    if (companies.length + periods.length + codes.length === 0) {
+      setDbMgmtStatus('请至少选择一项删除条件（按住 Ctrl 多选公司）', 'err');
+      return;
+    }
+    if (!confirm(`确认删除以下范围内的数据？\n公司：${companies.join('、') || '全部'}\n报告期：${periods.join('、') || '全部'}\n指标：${codes.join('、') || '全部'}`)) return;
+    setDbMgmtStatus('正在删除…');
+    const { resp, data } = await apiFetch('/api/data', { method: 'DELETE', body: { companies, periods, codes } });
+    if (resp.ok && data.ok) {
+      setDbMgmtStatus(`已删除 ${data.deleted} 行，剩余 ${data.remaining} 行`, 'ok');
+      await refreshCloudData();
+      fillOptions();
+    } else {
+      setDbMgmtStatus('删除失败：' + ((data && data.error) || resp.status), 'err');
+    }
+  });
+
+  document.getElementById('btnUploadData').addEventListener('click', async () => {
+    const file = document.getElementById('mgmtFile').files[0];
+    if (!file) { setDbMgmtStatus('请先选择 JSON 文件', 'err'); return; }
+    if (!isCloudMode) { setDbMgmtStatus('需部署到 Cloudflare 后可用', 'err'); return; }
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.rows) ? parsed.rows : null);
+      if (!rows || rows.length === 0) throw new Error('未找到 rows 数组');
+      setDbMgmtStatus(`正在上传合并 ${rows.length} 行…`);
+      const { resp, data } = await apiFetch('/api/data', { method: 'POST', body: { rows } });
+      if (resp.ok && data.ok) {
+        setDbMgmtStatus(`已合并 ${data.added} 行，数据库现有 ${data.total} 行`, 'ok');
+        await refreshCloudData();
+        fillOptions();
+      } else {
+        setDbMgmtStatus('上传失败：' + ((data && data.error) || resp.status), 'err');
+      }
+    } catch (err) {
+      setDbMgmtStatus('文件解析失败：' + err.message, 'err');
+    }
+    document.getElementById('mgmtFile').value = '';
+  });
+}
+
+function setDbMgmtStatus(html, cls) {
+  const el = document.getElementById('dbMgmtStatus');
+  if (el) { el.innerHTML = html; el.className = 'db-mgmt-status' + (cls ? ' ' + cls : ''); }
 }
 
 function renderExtractView() {
@@ -3162,6 +3604,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initDbFilters();
   initDownloadView();
   initExtractView();
+  initDbMgmt();
+  // 云模式探测（Cloudflare 部署时启用动态数据与执行按钮；GitHub Pages 静态模式自动降级）
+  initCloudMode();
 
   document.getElementById('companySearch').addEventListener('input', e => {
     renderCompanyGroups(e.target.value);
