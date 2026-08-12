@@ -1,6 +1,6 @@
-// POST /api/extract — 提取一家公司：R2 读 PDF → pdfjs 全文 → 按表定位 → DeepSeek 逐表提取 → 组装行 → 勾稽 → upsert 入库
+// POST /api/extract — 提取一家公司：存储读 PDF → pdfjs 全文 → 按表定位 → DeepSeek 逐表提取 → 组装行 → 勾稽 → upsert 入库
 import { route, ok, fail } from '../_lib/auth.js';
-import { readDB, writeDB, upsertRows, readJSON, exists } from '../_lib/db.js';
+import { readDB, writeDB, upsertRows, readJSON, exists, storeGetBytes } from '../_lib/db.js';
 import { extractText, extractTableText } from '../_lib/pdf.js';
 import { TABLE_KEYWORDS, locateTable, extractTable, mergePageResults, matchIndicators, convToYi } from '../_lib/extractor.js';
 import { runChecks } from '../_lib/check.js';
@@ -26,7 +26,7 @@ export async function onRequest(request, env) {
       const year = (body.year || '2025年度').trim();
       if (!company) return fail('缺少 company 参数');
 
-      // 1) 读取模板（R2 优先，未初始化用内置）
+      // 1) 读取模板（存储优先，未初始化用内置）
       let template = await readJSON(env, env.TPL_KEY || 'template_163.json', null);
       if (!template || !template.length) template = BUILTIN_TEMPLATE;
 
@@ -35,8 +35,8 @@ export async function onRequest(request, env) {
       if (!(await exists(env, pdfKey))) {
         return fail(`未找到 PDF：${pdfKey}，请先下载或上传`, 404);
       }
-      const obj = await env.STORE.get(pdfKey);
-      const pdfData = await obj.arrayBuffer();
+      const pdfData = await storeGetBytes(env.STORE, pdfKey);
+      if (!pdfData) return fail('读取 PDF 失败，请重新下载或上传');
 
       // 3) 全文提取
       const fullText = await extractText(pdfData);

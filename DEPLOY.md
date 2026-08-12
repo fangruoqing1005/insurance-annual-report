@@ -1,62 +1,70 @@
-# Cloudflare Pages 部署指引（云模式：全流程操作台）
+# Cloudflare Pages 部署指引（云模式：全流程操作台 · KV 存储版）
 
 本仓库同时支持两种模式：
 - **静态模式（GitHub Pages）**：只读展示，无执行能力（下载/提取按钮禁用）
-- **云模式（Cloudflare Pages + Functions + R2）**：完整全流程操作台——选公司 → 下载/上传 PDF → AI 提取 → 入库 → 分析
+- **云模式（Cloudflare Pages + Functions + KV）**：完整全流程操作台——选公司 → 下载/上传 PDF → AI 提取 → 入库 → 分析
 
-以下步骤在你的电脑上执行一次即可。
+存储使用 **Workers KV**（免费套餐自带，**无需绑定信用卡**），替代 R2。
+
+> 本指引为「Dashboard 手动操作」版，全程不用 wrangler 命令行。
 
 ## 前置条件
 
-1. 注册 Cloudflare 账号（若已在用 `insurance-annual-report.pages.dev` 则跳过）
-2. 本机安装 Node.js 18+（已有）
-3. 准备 DeepSeek API Key（提取用，也可换其他 OpenAI 兼容接口）
+1. Cloudflare 账号（已注册）
+2. GitHub 仓库 `fangruoqing1005/insurance-annual-report`（代码需已推送本仓库）
+3. DeepSeek API Key（`sk-` 开头，提取用）
 
-## 一、安装 wrangler
+## 一、创建 KV namespace（免费，无需绑卡）
 
-```bash
-npm install -g wrangler
-```
+1. 打开 https://dash.cloudflare.com 登录
+2. 左侧导航 → **Workers 和 Pages** → **KV** 标签页
+3. 点 **创建命名空间 / Create a namespace**：
+   - 名称填 `insurance-kv`
+   - 创建
+4. 创建后记录页面上显示的 **Namespace ID**（形如 `a1b2c3d4...`，后续可选用于 wrangler 配置）
 
-## 二、登录 Cloudflare
+## 二、Git 方式创建 Pages 项目（关键：必须是 Git 连接，Direct Upload 不支持 Functions）
 
-```bash
-wrangler login
-```
-浏览器会打开 Cloudflare 授权页，点 Allow 即可（自动获取 API Token，无需手动创建）。
+1. 左侧导航 → **Workers 和 Pages** → **创建 / Create** → **Pages**
+2. 选 **连接到 Git / Connect to Git** → 授权 GitHub → 选仓库 `fangruoqing1005/insurance-annual-report`
+3. 构建设置：
+   - Framework preset：**None**
+   - Build command：**留空**
+   - Build output directory：**留空**
+4. 点 **保存并部署 / Save and Deploy**（首次部署静态页面）
 
-## 三、创建 R2 存储桶（存 PDF / 数据库 / 模板）
+> ⚠️ 若之前用「直接上传」创建过同名项目，请删除后重新以 Git 方式创建（否则 Functions 不生效）。
 
-```bash
-wrangler r2 bucket create insurance-annual-report
-```
+## 三、绑定 KV 到 Pages 项目
 
-## 四、设置环境变量（敏感信息，不进代码）
+1. 进入项目 → **设置 / Settings** → **函数 / Functions** → **KV 命名空间绑定 / KV namespace bindings**
+2. 点 **添加绑定 / Add binding**：
+   - 变量名 / Variable name：`STORE`（必须与代码一致）
+   - KV 命名空间：`insurance-kv`
+3. 保存
 
-```bash
-# DeepSeek API Key（必填）
-wrangler pages secret put AI_API_KEY
-# 输入你的 sk-xxx 即可
+## 四、设置环境变量
 
-# 可选：管理密码（页面上的删除/上传/提取需要；不设置则无鉴权，建议设置）
-wrangler pages secret put ADMIN_PASS
+项目 **设置 / Settings** → **环境变量 / Environment variables** → **生产 / Production** → **添加变量**：
 
-# 可选：换模型（默认 deepseek-chat）
-wrangler pages secret put AI_MODEL
-```
+| 变量名 | 值 | 必填 |
+|--------|-----|------|
+| `AI_API_KEY` | 你的 DeepSeek API Key（sk- 开头） | ✅ |
+| `ADMIN_PASS` | 自定义管理密码（页面删除/上传/提取需输入） | 建议 |
+| `AI_MODEL` | 可选，默认 `deepseek-chat` | 否 |
 
-## 五、部署
+保存后：**部署 / Deployments** → **重试部署 / Retry deployment**（环境变量与绑定在重新构建后生效）。
 
-```bash
-# 项目根目录
-npm install
-wrangler pages deploy .
-```
+## 五、初始化数据（上传数据库与模板）
 
-部署完成后输出 `https://insurance-annual-report.pages.dev/`（若已有该项目会覆盖更新）。
+KV 是空的，首次部署后需要初始化：
 
-> 若已有 Cloudflare Pages 项目（`insurance-annual-report`），`wrangler pages deploy .` 会自动关联同名项目；
-> 若想新建，加 `--project-name insurance-annual-report`。
+1. 打开 `https://insurance-annual-report.pages.dev` → 数据库页 → 底部**数据管理**区
+2. **上传导入**：选择本地 `database.json`（本项目根目录已有）→ 上传，页面提示合并行数
+3. 智能提取页 → **模板管理** → **上传覆盖模板**：选择本地 `template_163.json` 上传
+4. 完成后数据库页应有 37 家公司数据
+
+> 或者直接调接口：`POST /api/data`（body: `{"rows":[...]}`）与 `POST /api/template`（body: `{"template":[...]}`），需带 `x-admin-pass` 请求头。
 
 ## 六、验证云模式
 
@@ -74,21 +82,30 @@ wrangler pages deploy .
 4. **数据管理**：可范围删除误数据、上传 JSON 增量合并（测试/修正用）
 5. **模板管理**：下载当前 163 行模板、上传新模板覆盖（下次提取生效）
 
+## 免费额度说明（KV）
+
+| 项目 | 免费额度 | 本项目用量 |
+|------|---------|-----------|
+| 存储 | 1 GB | 数据库 ~3MB + 几十个 PDF ≈ 500MB |
+| 读操作 | 10 万次/天 | 页面加载每次 1 次 |
+| 写操作 | 1 千次/天 | 提取/删除操作每次 1-2 次 |
+
 ## 常见问题
 
 - **执行按钮灰色**：未部署到 Cloudflare（静态模式），部署后自动启用
 - **提取提示"未授权"**：设置了 ADMIN_PASS 后需在页面首次操作时输入一次
 - **"未找到 PDF"**：该公司 PDF 未上传，先点「下载 PDF」或「上传 PDF」
 - **勾稽 FAIL / 行名可疑**：AI 提取的个别指标需人工核对（提取报告会列出），可用数据库页范围删除后手动修正
-- **自动下载地址**：`sources.json`（R2 中）可配置公司→PDF URL 映射实现全自动下载；未配置的公司走"上传 PDF"
+- **自动下载地址**：`sources.json`（KV 中）可配置公司→PDF URL 映射实现全自动下载；未配置的公司走"上传 PDF"
+- **单值大小限制**：KV 单值最大 25MB（年报 PDF 一般 5-20MB，可正常存储）
 
 ## 文件结构
 
 ```
 functions/            Cloudflare Pages Functions（后端）
   api/                data / download / extract / template 四个接口
-  _lib/               db(R2) / pdf(pdfjs解析) / extractor(AI提取) / deepseek / check(勾稽) / auth
-wrangler.jsonc        R2 绑定与变量配置
+  _lib/               db(KV/R2适配) / pdf(pdfjs解析) / extractor(AI提取) / deepseek / check(勾稽) / auth
+wrangler.jsonc        KV 绑定与变量配置（Dashboard 手动绑定时无需填 id）
 index.html            前端（静态 + 云模式自动切换）
 data.js               静态数据库（云模式下被 /api/data 动态数据覆盖）
 DEPLOY.md             本文件
@@ -100,4 +117,4 @@ DEPLOY.md             本文件
 npm install
 wrangler pages dev .   # 启动本地 Pages 环境，访问 http://localhost:8788
 ```
-本地调试同样需要 `AI_API_KEY`（可用 `wrangler pages secret put` 或在 dashboard 配置）。
+本地调试同样需要 `AI_API_KEY`。

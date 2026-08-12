@@ -1,5 +1,91 @@
-// R2 数据库读写：raw_data.json（17列行对象数组，与前端 RAW_DATA 同构）
-// 兼容本地测试（注入 memory 对象）与 Cloudflare R2 两种后端
+// 数据库读写：raw_data.json（17列行对象数组，与前端 RAW_DATA 同构）
+// 存储适配层：兼容 Cloudflare KV（免费套餐，无需绑卡）与 R2，以及本地测试（注入 memory 对象）
+//   KV API : get(key, {type:'text'|'arrayBuffer'}) → string|ArrayBuffer|null ; put(key, value) ; delete(key)
+//   R2 API : get(key) → R2Object|null（有 .text()/.arrayBuffer()）；put(key, value, {httpMetadata}) ；delete(key)
+
+// ===== 适配层 =====
+
+// 读文本：返回 string | null
+export async function storeGetText(store, key) {
+  if (!store) return null;
+  try {
+    const v = await store.get(key, { type: 'text' });
+    if (v == null) return null;
+    if (typeof v === 'string') return v;                       // KV
+    if (typeof v.text === 'function') return await v.text();   // R2
+    return null;
+  } catch (e) {
+    console.error('storeGetText error', e);
+    return null;
+  }
+}
+
+// 读二进制：返回 ArrayBuffer | null
+export async function storeGetBytes(store, key) {
+  if (!store) return null;
+  try {
+    const v = await store.get(key, { type: 'arrayBuffer' });
+    if (v == null) return null;
+    if (v instanceof ArrayBuffer) return v;                                 // KV
+    if (typeof v.arrayBuffer === 'function') return await v.arrayBuffer();  // R2
+    return null;
+  } catch (e) {
+    console.error('storeGetBytes error', e);
+    return null;
+  }
+}
+
+// 写入：value 支持 string|Uint8Array|ArrayBuffer|ReadableStream（KV 不支持流，自动转字节）
+export async function storePut(store, key, value, contentType) {
+  if (!store) return false;
+  try {
+    if (value && typeof value.getReader === 'function') {
+      value = await streamToBytes(value);
+    }
+    if (contentType) {
+      // R2 使用 httpMetadata；KV 忽略未知选项字段
+      await store.put(key, value, { httpMetadata: { contentType } });
+    } else {
+      await store.put(key, value);
+    }
+    return true;
+  } catch (e) {
+    console.error('storePut error', e);
+    return false;
+  }
+}
+
+// 键是否存在
+export async function storeExists(store, key) {
+  if (!store) return false;
+  try {
+    const v = await store.get(key, { type: 'text' });
+    return v != null;
+  } catch {
+    return false;
+  }
+}
+
+async function streamToBytes(stream) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      const u8 = value instanceof Uint8Array ? value : new Uint8Array(value);
+      chunks.push(u8);
+      total += u8.byteLength;
+    }
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.byteLength; }
+  return out;
+}
+
+// ===== 高层 API =====
 
 // 数据行字段（与 data.js RAW_DATA 一致）
 export const DB_HEADERS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称',
@@ -12,9 +98,8 @@ export async function readDB(env, { memory } = {}) {
   if (!store) return [];
   const key = env?.DB_KEY || 'raw_data.json';
   try {
-    const obj = await store.get(key);
-    if (!obj) return [];
-    const text = await obj.text();
+    const text = await storeGetText(store, key);
+    if (!text) return [];
     const data = JSON.parse(text);
     return Array.isArray(data) ? data : [];
   } catch (e) {
@@ -28,14 +113,12 @@ export async function writeDB(env, rows, { memory } = {}) {
   const store = memory || env?.STORE;
   if (!store) return false;
   const key = env?.DB_KEY || 'raw_data.json';
-  await store.put(key, JSON.stringify(rows));
-  return true;
+  return storePut(store, key, JSON.stringify(rows));
 }
 
 // 按 公司+报告期 增量合并（upsert：匹配行替换，其余保留；新增行追加）
 export function upsertRows(existing, incoming) {
   const out = existing.slice();
-  const replaced = new Set(); // '公司|报告期|指标编号|期间' 已替换的 key
   incoming.forEach(r => {
     const key = `${r['公司名称']}|${r['报告期']}|${r['指标编号']}|${r['期间']}`;
     const idx = out.findIndex(x =>
@@ -43,7 +126,6 @@ export function upsertRows(existing, incoming) {
       x['指标编号'] === r['指标编号'] && x['期间'] === r['期间']);
     if (idx >= 0) {
       out[idx] = r;
-      replaced.add(key);
     } else {
       out.push(r);
     }
@@ -77,9 +159,9 @@ export async function readJSON(env, key, fallback = null, { memory } = {}) {
   const store = memory || env?.STORE;
   if (!store) return fallback;
   try {
-    const obj = await store.get(key);
-    if (!obj) return fallback;
-    return JSON.parse(await obj.text());
+    const text = await storeGetText(store, key);
+    if (text == null) return fallback;
+    return JSON.parse(text);
   } catch (e) {
     console.error('readJSON error', e);
     return fallback;
@@ -89,16 +171,11 @@ export async function readJSON(env, key, fallback = null, { memory } = {}) {
 export async function writeJSON(env, key, data, { memory } = {}) {
   const store = memory || env?.STORE;
   if (!store) return false;
-  await store.put(key, JSON.stringify(data));
-  return true;
+  return storePut(store, key, JSON.stringify(data));
 }
 
-// R2 对象是否存在
+// 对象是否存在
 export async function exists(env, key, { memory } = {}) {
   const store = memory || env?.STORE;
-  if (!store) return false;
-  try {
-    const obj = await store.get(key);
-    return !!obj;
-  } catch { return false; }
+  return storeExists(store, key);
 }

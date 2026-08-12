@@ -1,5 +1,5 @@
 // /api/template — 163行模板管理
-// GET   返回当前模板（R2 优先，未初始化用内置）
+// GET   返回当前模板（存储优先，未初始化用内置）
 // POST  上传覆盖模板（JSON 数组，163行）
 import { route, ok, fail } from '../_lib/auth.js';
 import { readJSON, writeJSON } from '../_lib/db.js';

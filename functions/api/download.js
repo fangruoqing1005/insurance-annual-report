@@ -1,9 +1,9 @@
 // /api/download — PDF 下载/上传管理
-// POST {company, year, url?}  — 有 url：服务端抓取存 R2；无 url 返回 {needUpload:true} 提示前端走上传
-// POST multipart（file 字段）   — 直接上传 PDF 文件存 R2
+// POST {company, year, url?}  — 有 url：服务端抓取存存储；无 url 返回 {needUpload:true} 提示前端走上传
+// POST multipart（file 字段）   — 直接上传 PDF 文件存存储
 // GET  ?company=&year=          — 查询某公司 PDF 是否已存在
 import { route, ok, fail } from '../_lib/auth.js';
-import { exists, readJSON } from '../_lib/db.js';
+import { exists, readJSON, storePut } from '../_lib/db.js';
 
 export async function onRequest(request, env) {
   return route(request, env, {
@@ -30,9 +30,7 @@ export async function onRequest(request, env) {
         const year = String(form.get('year') || '2025年度').trim();
         if (!company) return fail('缺少 company 参数');
         const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
-        await env.STORE.put(key, file.stream(), {
-          httpMetadata: { contentType: file.type || 'application/pdf' }
-        });
+        await storePut(env.STORE, key, file.stream(), file.type || 'application/pdf');
         return ok({ company, year, pdfKey: key, action: 'uploaded' });
       }
 
@@ -72,6 +70,6 @@ async function doFetch(env, company, year, url) {
   const buf = await resp.arrayBuffer();
   if (buf.byteLength < 1000) return fail('下载内容过小，可能不是 PDF');
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
-  await env.STORE.put(key, buf, { httpMetadata: { contentType: 'application/pdf' } });
+  await storePut(env.STORE, key, buf, 'application/pdf');
   return ok({ company, year, pdfKey: key, bytes: buf.byteLength, action: 'downloaded' });
 }
