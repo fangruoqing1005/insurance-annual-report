@@ -94,11 +94,17 @@ print(f'模板行数: {len(template)}')
 
 # ========== 4. 构建 COMPANIES_DATA（92家，6类型）==========
 # 类型体系以92家总览为准：头部险企/外资公司/银行系公司/养老公司/健康险公司/中小公司
+# 用户确认的类型修正（覆盖总览原始标注）
+TYPE_OVERRIDE = {
+    '国民养老保险股份有限公司': '银行系公司',   # 用户2026-08-12确认：国民养老改为银行系
+}
 TYPE_ORDER = ['头部险企', '外资公司', '银行系公司', '养老公司', '健康险公司', '中小公司']
 type_rules = {t: [] for t in TYPE_ORDER}
 for o in overview:
-    if o['type'] in type_rules:
-        type_rules[o['type']].append(o['full_name'])
+    t = TYPE_OVERRIDE.get(o['full_name'], o['type'])
+    o['type'] = t
+    if t in type_rules:
+        type_rules[t].append(o['full_name'])
 for t in TYPE_ORDER:
     print(f'  {t}: {len(type_rules[t])} 家')
 
