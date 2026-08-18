@@ -29,7 +29,7 @@
 2. 选 **连接到 Git / Connect to Git** → 授权 GitHub → 选仓库 `fangruoqing1005/insurance-annual-report`
 3. 构建设置：
    - Framework preset：**None**
-   - Build command：**留空**
+   - Build command：**`npm install`**（⚠️ 必填！否则 Functions 依赖 pdfjs-dist 不会安装，部署报 `Could not resolve "pdfjs-dist/legacy/build/pdf.mjs"`）
    - Build output directory：**留空**
 4. 点 **保存并部署 / Save and Deploy**（首次部署静态页面）
 
@@ -98,6 +98,9 @@ KV 是空的，首次部署后需要初始化：
 - **勾稽 FAIL / 行名可疑**：AI 提取的个别指标需人工核对（提取报告会列出），可用数据库页范围删除后手动修正
 - **自动下载地址**：`sources.json`（KV 中）可配置公司→PDF URL 映射实现全自动下载；未配置的公司走"上传 PDF"
 - **单值大小限制**：KV 单值最大 25MB（年报 PDF 一般 5-20MB，可正常存储）
+- **部署报 `Could not resolve "pdfjs-dist/...`**：Build command 未设置导致依赖未安装 → 把 Build command 设为 `npm install`
+- **部署后运行时报 `Cannot read properties of undefined (reading 'has')`**：pdfjs-dist 4.x 与 Cloudflare 打包器不兼容 → 已降级为 3.11.174（不要升级回 4.x）
+- **wrangler.jsonc 不生效**：配置文件必须包含 `pages_build_output_dir` 字段才会被 Git 集成读取（已配置为 "."）
 
 ## 文件结构
 
