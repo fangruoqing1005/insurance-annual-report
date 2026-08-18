@@ -3,12 +3,10 @@
   "name": "insurance-annual-report",
   "compatibility_date": "2025-01-01",
   "compatibility_flags": ["nodejs_compat"],
-  // 存储绑定：使用 Workers KV（免费套餐，无需绑卡）替代 R2
-  // 手动部署（Dashboard）方式：Settings → Functions → KV namespace bindings → Variable name: STORE
-  // id 可在 Dashboard → Workers & Pages → KV → 创建 namespace 后复制；使用 wrangler 部署时才需要填
-  "kv_namespaces": [
-    { "binding": "STORE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
-  ],
+  // 必须包含 pages_build_output_dir，否则 Git 集成构建时本配置被跳过
+  // （nodejs_compat / vars 均不会生效）。静态文件在仓库根目录，故设为 "."
+  "pages_build_output_dir": ".",
+  // KV 绑定请在 Dashboard 手动配置（Settings → Functions → KV namespace bindings → STORE）
   "vars": {
     "DB_KEY": "raw_data.json",
     "TPL_KEY": "template_163.json",

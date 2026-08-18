@@ -8,6 +8,6 @@
     "deploy": "wrangler pages deploy"
   },
   "dependencies": {
-    "pdfjs-dist": "^4.4.168"
+    "pdfjs-dist": "^3.11.174"
   }
 }

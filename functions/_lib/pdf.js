@@ -1,6 +1,11 @@
 // PDF 文本/坐标提取（pdfjs-dist 纯 JS，Cloudflare Workers 兼容）
 // 对应手册 Step1（fitz get_text）与 4.3 坐标重建（get_text('words')）
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+// 注意：使用 pdfjs-dist 3.x（4.x 的 legacy 构建与 Cloudflare Pages 打包器 esbuild 不兼容，
+//       会产生 "Cannot read properties of undefined (reading 'has')" 运行时错误）
+import * as pdfjsNS from 'pdfjs-dist/legacy/build/pdf.js';
+// 兼容 node ESM（CJS interop 走 default）与 esbuild 打包（命名导出直通）
+const pdfjs = pdfjsNS.getDocument ? pdfjsNS : (pdfjsNS.default || pdfjsNS);
+const { getDocument } = pdfjs;
 
 // 防御：pdfjs getDocument 会 transfer 传入的 buffer，调用方可能复用同一份数据 → 拷贝
 function toUint8(pdfData) {
