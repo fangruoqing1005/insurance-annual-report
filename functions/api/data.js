@@ -1,16 +1,15 @@
 // /api/data — 数据库管理
-// GET    返回全部数据（前端动态加载）与统计
-// DELETE 范围删除 {companies:[], periods:[], codes:[]}（任一命中即删）
-// POST   上传合并 {rows:[...]}（upsert）
-import { route, ok, fail } from '../_lib/auth.js';
+// GET    返回全部数据（前端动态加载）与统计 【公开：页面加载/云模式探测依赖】
+// DELETE 范围删除 {companies:[], periods:[], codes:[]}（任一命中即删）【需管理密码】
+// POST   上传合并 {rows:[...]}（upsert）【需管理密码】
+import { route, ok, fail, checkAuth } from '../_lib/auth.js';
 import { readDB, writeDB, deleteRows, upsertRows } from '../_lib/db.js';
 
 export async function onRequest(request, env) {
   return route(request, env, {
     methods: ['GET', 'POST', 'DELETE'],
-    admin: true,
     handler: async (req) => {
-      // ===== GET：读数据库 =====
+      // ===== GET：读数据库（公开，云模式探测依赖它）=====
       if (req.method === 'GET') {
         const rows = await readDB(env);
         const companies = [...new Set(rows.map(r => r['公司名称']))].sort();
@@ -20,6 +19,11 @@ export async function onRequest(request, env) {
           rows,
           stats: { total: rows.length, companies: companies.length, periods, indicators: indicators.length }
         });
+      }
+
+      // ===== 写操作需管理密码 =====
+      if (!checkAuth(req, env)) {
+        return fail('未授权：请先在页面设置管理密码', 401);
       }
 
       // ===== DELETE：范围删除 =====

@@ -1485,12 +1485,30 @@ function getAdminToken() {
 function setAdminToken(t) {
   localStorage.setItem('admin_token', t);
 }
+// 弹出输入管理密码（401 时调用），成功后执行回调
+function promptAdminToken(cb) {
+  const pass = window.prompt('请输入管理密码（首次使用需输入，之后保存在本浏览器）：');
+  if (pass) {
+    setAdminToken(pass);
+    cb && cb();
+  }
+}
 
 async function apiFetch(path, { method = 'GET', body } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getAdminToken();
-  if (token) headers['X-Admin-Token'] = token;
-  const resp = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const doFetch = (token) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['X-Admin-Token'] = token;
+    return fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  };
+  let resp = await doFetch(getAdminToken());
+  // 写操作 401 → 提示输入管理密码后重试一次
+  if (resp.status === 401 && method !== 'GET') {
+    const pass = window.prompt('操作需要管理密码，请输入：');
+    if (pass) {
+      setAdminToken(pass);
+      resp = await doFetch(pass);
+    }
+  }
   let data = null;
   try { data = await resp.json(); } catch (e) {}
   return { resp, data };
@@ -1503,6 +1521,10 @@ async function initCloudMode() {
     if (resp.ok && data && Array.isArray(data.rows)) {
       isCloudMode = true;
       applyCloudData(data.rows);
+    } else if (resp.status === 401) {
+      // 接口存在但需管理密码（管理员设置了 ADMIN_PASS）：仍算云模式，提示输入密码后重新加载
+      isCloudMode = true;
+      promptAdminToken(() => initCloudMode());
     }
   } catch (e) {
     // 静态模式：接口 404/不可达

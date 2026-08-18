@@ -1,14 +1,13 @@
 // /api/download — PDF 下载/上传管理
-// POST {company, year, url?}  — 有 url：服务端抓取存存储；无 url 返回 {needUpload:true} 提示前端走上传
-// POST multipart（file 字段）   — 直接上传 PDF 文件存存储
-// GET  ?company=&year=          — 查询某公司 PDF 是否已存在
-import { route, ok, fail } from '../_lib/auth.js';
+// POST {company, year, url?}  — 有 url：服务端抓取存存储；无 url 返回 {needUpload:true} 提示前端走上传【需管理密码】
+// POST multipart（file 字段）   — 直接上传 PDF 文件存存储【需管理密码】
+// GET  ?company=&year=          — 查询某公司 PDF 是否已存在【公开】
+import { route, ok, fail, checkAuth } from '../_lib/auth.js';
 import { exists, readJSON, storePut } from '../_lib/db.js';
 
 export async function onRequest(request, env) {
   return route(request, env, {
     methods: ['GET', 'POST'],
-    admin: true,
     handler: async (req) => {
       if (req.method === 'GET') {
         const url = new URL(req.url);
@@ -17,6 +16,11 @@ export async function onRequest(request, env) {
         const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
         const has = await exists(env, key);
         return ok({ company, year, pdfKey: key, hasPdf: has });
+      }
+
+      // ===== 写操作需管理密码 =====
+      if (!checkAuth(req, env)) {
+        return fail('未授权：请先在页面设置管理密码', 401);
       }
 
       const contentType = req.headers.get('Content-Type') || '';
