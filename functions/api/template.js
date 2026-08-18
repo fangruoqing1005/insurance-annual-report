@@ -5,7 +5,7 @@ import { route, ok, fail, checkAuth } from '../_lib/auth.js';
 import { readJSON, writeJSON } from '../_lib/db.js';
 import { BUILTIN_TEMPLATE } from '../_lib/template_data.js';
 
-export async function onRequest(request, env) {
+export async function onRequest({ request, env }) {
   return route(request, env, {
     methods: ['GET', 'POST'],
     handler: async (req) => {

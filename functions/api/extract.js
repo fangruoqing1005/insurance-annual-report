@@ -16,7 +16,7 @@ function periodVal(ext, per) {
   return ext[per] ?? null;
 }
 
-export async function onRequest(request, env) {
+export async function onRequest({ request, env }) {
   return route(request, env, {
     methods: ['POST'],
     admin: true,

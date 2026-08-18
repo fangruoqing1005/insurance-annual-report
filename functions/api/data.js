@@ -5,7 +5,7 @@
 import { route, ok, fail, checkAuth } from '../_lib/auth.js';
 import { readDB, writeDB, deleteRows, upsertRows } from '../_lib/db.js';
 
-export async function onRequest(request, env) {
+export async function onRequest({ request, env }) {
   return route(request, env, {
     methods: ['GET', 'POST', 'DELETE'],
     handler: async (req) => {
