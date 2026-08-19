@@ -1099,6 +1099,98 @@ body {
   background: var(--c-surface);
 }
 
+/* 公司联想选择器 */
+.company-picker { position: relative; display: inline-block; vertical-align: middle; }
+.company-picker .cp-input {
+  padding: 5px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.company-picker .cp-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 120;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.company-picker .cp-item {
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.company-picker .cp-item:hover, .company-picker .cp-item.active { background: var(--c-navy); color: #fff; }
+.company-picker .cp-item .cp-full { font-size: 11px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.company-picker .cp-empty { padding: 8px 10px; font-size: 12px; color: #9B3A3A; }
+/* 弹窗 */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+.overlay-box {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  width: 680px;
+  max-width: 94vw;
+  max-height: 84vh;
+  display: flex; flex-direction: column;
+  padding: 16px 18px;
+  box-sizing: border-box;
+}
+.overlay-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.overlay-title { font-size: 14px; font-weight: 700; color: var(--c-text-primary); }
+.overlay-close { cursor: pointer; border: none; background: none; font-size: 18px; color: var(--c-text-secondary); line-height: 1; padding: 2px 6px; }
+.overlay-close:hover { color: var(--c-text-primary); }
+.overlay-body { overflow-y: auto; flex: 1; font-size: 12px; color: var(--c-text-primary); }
+/* 批量选择列表 */
+.batch-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.batch-list { border: 1px solid var(--c-border); border-radius: 4px; }
+.batch-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+  border-bottom: 1px solid var(--c-border); font-size: 12px; cursor: pointer;
+}
+.batch-row:last-child { border-bottom: none; }
+.batch-row:hover { background: var(--c-bg-hover, rgba(0,0,0,.03)); }
+.batch-row input { cursor: pointer; }
+.batch-row .b-full { color: var(--c-text-secondary); font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-row .b-type { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--c-border); color: var(--c-text-secondary); white-space: nowrap; }
+.batch-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* 下载地址配置 */
+.src-form { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.src-form .company-picker { width: 200px; }
+.src-form .cp-input { font-size: 12px; }
+.src-form input[type="text"] {
+  padding: 5px 10px; border: 1px solid var(--c-border); border-radius: 3px;
+  font-size: 12px; font-family: 'Noto Sans SC', sans-serif; background: var(--c-surface);
+  color: var(--c-text-primary); outline: none; flex: 1; min-width: 220px;
+}
+.src-list { border: 1px solid var(--c-border); border-radius: 4px; max-height: 240px; overflow-y: auto; }
+.src-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-bottom: 1px solid var(--c-border); font-size: 12px; }
+.src-row:last-child { border-bottom: none; }
+.src-row .s-name { font-weight: 600; white-space: nowrap; }
+.src-row .s-url { flex: 1; color: var(--c-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-row .s-del { cursor: pointer; color: #9B3A3A; border: none; background: none; font-size: 12px; }
+.src-tip { font-size: 11px; color: var(--c-text-secondary); margin-top: 8px; line-height: 1.6; }
+
 @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
   .sidebar { width: 64px; }
@@ -1367,15 +1459,19 @@ body {
         <i class="fa-solid fa-circle-info" style="font-size:11px;"></i>
         获取渠道：① 中国保险行业协会年度信息披露栏目（优先）→ ② 各公司官网「公开信息披露」→ 附件。
         注意区分《年度信息披露报告》(简版，部分无附注) 与《年度财务报表及审计报告》(必须用后者)；命名规范
-        <code>{公司全称}_{年度}年年度报告.pdf</code>，统一放入 pdfs\ 目录。
-        <span class="cloud-only" style="margin-left:6px;">部署到 Cloudflare 后，可直接在下方对公司执行 <b>下载/上传 PDF → AI 提取 → 入库</b>。</span>
+        <code>{公司全称}_{年度}年年度报告.pdf</code>。
+        <span class="cloud-only" style="margin-left:6px;">云模式：选择目标公司后点「下载 PDF」（自动抓取需先在 <b>智能提取 → 下载地址配置</b> 中登记 PDF 地址，未登记的公司请手动下载后点「上传 PDF」）；AI 提取入库在「智能提取」页执行。</span>
       </div>
 
       <!-- 云模式操作区 -->
       <div class="dl-ops cloud-only" id="dlOps" style="display:none;">
         <div class="dl-ops-left">
           <label>目标公司：</label>
-          <input type="text" id="dlTargetCompany" placeholder="如 中国人寿" style="width:140px;">
+          <div class="company-picker" style="width:230px;">
+            <input type="text" class="cp-input" id="dlCompanyInput" placeholder="输入简称/全称，从列表选择" autocomplete="off">
+            <input type="hidden" id="dlCompanyVal">
+            <div class="cp-list" id="dlCompanyList"></div>
+          </div>
           <label>报告期：</label>
           <select id="dlTargetYear"></select>
           <button class="btn-apply cloud-only" id="btnDownloadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
@@ -1384,12 +1480,21 @@ body {
           <button class="btn-apply cloud-only" id="btnUploadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
             <i class="fa-solid fa-upload" style="font-size:11px;"></i> 上传 PDF
           </button>
-          <button class="btn-apply cloud-only" id="btnAiExtract" style="width:auto;padding:6px 14px;font-size:12px;background:#1D6A4F;">
-            <i class="fa-solid fa-wand-magic-sparkles" style="font-size:11px;"></i> AI 提取入库
-          </button>
           <input type="file" id="dlPdfFile" accept=".pdf" style="display:none;">
         </div>
-        <div class="dl-ops-status" id="dlOpsStatus"></div>
+        <div class="dl-ops-left">
+          <label>批量下载：</label>
+          <select id="dlBatchType">
+            <option value="">全部类型</option>
+          </select>
+          <button class="btn-apply cloud-only" id="btnBatchByType" style="width:auto;padding:6px 14px;font-size:12px;">
+            <i class="fa-solid fa-layer-group" style="font-size:11px;"></i> 按类型批量
+          </button>
+          <button class="btn-apply cloud-only" id="btnBatchMulti" style="width:auto;padding:6px 14px;font-size:12px;">
+            <i class="fa-solid fa-list-check" style="font-size:11px;"></i> 多选批量…
+          </button>
+        </div>
+        <div class="dl-ops-status" id="dlOpsStatus" style="width:100%;max-width:none;"></div>
       </div>
 
       <div class="db-card" style="margin-top:10px;">
@@ -1412,6 +1517,29 @@ body {
         <div class="ext-step"><span class="step-no">3</span><span class="step-name">数据提取+勾稽</span></div>
         <div class="ext-step"><span class="step-no">4</span><span class="step-name">生成单独版</span></div>
         <div class="ext-step"><span class="step-no">5</span><span class="step-name">分批合并汇总</span></div>
+      </div>
+
+      <!-- 提取操作区（云模式）：选公司 → AI 提取入库 -->
+      <div class="dl-ops cloud-only" id="extOps" style="display:none;">
+        <div class="dl-ops-left">
+          <label>目标公司：</label>
+          <div class="company-picker" style="width:230px;">
+            <input type="text" class="cp-input" id="extCompanyInput" placeholder="输入简称/全称，从列表选择" autocomplete="off">
+            <input type="hidden" id="extCompanyVal">
+            <div class="cp-list" id="extCompanyList"></div>
+          </div>
+          <label>报告期：</label>
+          <select id="extTargetYear"></select>
+          <button class="btn-apply cloud-only" id="btnExtract" style="width:auto;padding:6px 14px;font-size:12px;background:#1D6A4F;">
+            <i class="fa-solid fa-wand-magic-sparkles" style="font-size:11px;"></i> AI 提取入库
+          </button>
+        </div>
+        <div class="dl-ops-left">
+          <button class="btn-apply cloud-only" id="btnSourcesConfig" style="width:auto;padding:6px 14px;font-size:12px;">
+            <i class="fa-solid fa-link" style="font-size:11px;"></i> 下载地址配置…
+          </button>
+        </div>
+        <div class="dl-ops-status" id="extOpsStatus" style="width:100%;max-width:none;"></div>
       </div>
 
       <!-- 模板管理（云模式）：下载当前 / 上传覆盖 -->
@@ -1450,6 +1578,63 @@ body {
         <div class="ext-prog-summary" id="extProgSummary"></div>
         <div class="db-card" style="margin-top:10px;">
           <div class="dl-table-wrap" id="extProgTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 多选批量下载弹窗 -->
+    <div class="overlay" id="batchMultiOverlay">
+      <div class="overlay-box">
+        <div class="overlay-head">
+          <span class="overlay-title">多选公司批量下载 PDF</span>
+          <button class="overlay-close" data-close="batchMultiOverlay">✕</button>
+        </div>
+        <div class="overlay-body">
+          <div class="batch-tools">
+            <select id="bmTypeFilter" style="padding:4px 8px;font-size:12px;border:1px solid var(--c-border);border-radius:3px;">
+              <option value="">全部类型</option>
+            </select>
+            <input type="text" id="bmSearch" placeholder="搜索公司简称/全称" style="padding:4px 8px;font-size:12px;border:1px solid var(--c-border);border-radius:3px;width:200px;">
+            <button class="btn-apply" id="bmCheckAll" style="width:auto;padding:4px 10px;font-size:12px;">全选</button>
+            <button class="btn-apply" id="bmClearAll" style="width:auto;padding:4px 10px;font-size:12px;">清空</button>
+            <span id="bmCount" style="font-size:12px;color:var(--c-text-secondary);"></span>
+          </div>
+          <div class="batch-list" id="bmList" style="max-height:320px;overflow-y:auto;"></div>
+          <div class="batch-actions">
+            <button class="btn-apply" id="bmCancel" style="width:auto;padding:6px 14px;font-size:12px;">取消</button>
+            <button class="btn-apply" id="bmStart" style="width:auto;padding:6px 14px;font-size:12px;background:#1D6A4F;">
+              <i class="fa-solid fa-download" style="font-size:11px;"></i> 开始批量下载
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下载地址配置弹窗 -->
+    <div class="overlay" id="sourcesOverlay">
+      <div class="overlay-box">
+        <div class="overlay-head">
+          <span class="overlay-title">下载地址配置（自动抓取 PDF 的地址映射）</span>
+          <button class="overlay-close" data-close="sourcesOverlay">✕</button>
+        </div>
+        <div class="overlay-body">
+          <div class="src-form">
+            <div class="company-picker">
+              <input type="text" class="cp-input" id="srcCompanyInput" placeholder="选公司（从92家列表）" autocomplete="off">
+              <input type="hidden" id="srcCompanyVal">
+              <div class="cp-list" id="srcCompanyList"></div>
+            </div>
+            <input type="text" id="srcUrl" placeholder="PDF 直链地址 https://…">
+            <button class="btn-apply" id="srcAdd" style="width:auto;padding:5px 12px;font-size:12px;">添加</button>
+          </div>
+          <div class="src-list" id="srcList"></div>
+          <div class="src-tip">
+            说明：登记的地址用于「下载 PDF」时自动抓取。地址为公司年度报告 PDF 的直链（各公司官网「公开信息披露」栏目或中保协下载链接）。
+            未登记地址的公司，点「下载 PDF」会提示手动下载后上传。保存后立即生效。
+          </div>
+          <div class="batch-actions">
+            <button class="btn-apply" id="srcClose" style="width:auto;padding:6px 14px;font-size:12px;">关闭</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1608,6 +1793,7 @@ function switchView(view) {
   document.getElementById('dlOps').style.display = cloudOn && isDownload ? '' : 'none';
   document.getElementById('dbMgmt').style.display = cloudOn && isDb ? '' : 'none';
   document.getElementById('extTplMgmt').style.display = cloudOn && isExtract ? '' : 'none';
+  document.getElementById('extOps').style.display = cloudOn && isExtract ? '' : 'none';
   if (isDb) renderDatabase();
   if (isDownload) renderDownloadView();
   if (isExtract) renderExtractView();
@@ -3058,51 +3244,111 @@ function initDownloadView() {
     renderDownloadView();
   });
 
-  // ===== 云模式操作区 =====
-  const yearSel = document.getElementById('dlTargetYear');
-  const fillYears = () => {
+  // ===== 云模式操作区（年报下载页 + 智能提取页）=====
+  const fillYearsInto = (sel) => {
     const years = REPORT_PERIODS.length ? REPORT_PERIODS : ['2025年度'];
-    yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
   };
-  fillYears();
+  fillYearsInto(document.getElementById('dlTargetYear'));
+  fillYearsInto(document.getElementById('extTargetYear'));
 
-  const opsStatus = document.getElementById('dlOpsStatus');
-  const setOps = (html, cls) => { opsStatus.innerHTML = html; opsStatus.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
-  const getTarget = () => ({ company: document.getElementById('dlTargetCompany').value.trim(), year: yearSel.value });
+  // 公司联想选择器组件（92家限定：输入过滤 + 必须从列表选）
+  function createCompanyPicker(inputId, valId, listId) {
+    const input = document.getElementById(inputId);
+    const val = document.getElementById(valId);
+    const list = document.getElementById(listId);
+    let items = [];
+    const close = () => { list.style.display = 'none'; };
+    const select = (c) => {
+      const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
+      input.value = short + ' · ' + c.full_name;
+      val.value = short;
+      val.dataset.full = c.full_name;
+      val.dataset.type = c.type;
+      close();
+    };
+    input.addEventListener('input', () => {
+      val.value = '';
+      const q = input.value.trim();
+      if (!q) { close(); return; }
+      items = COMPANIES_92.filter(c =>
+        c.full_name.includes(q) || (SHORT_NAME_MAP[c.full_name] || '').includes(q)
+      ).slice(0, 20);
+      if (!items.length) {
+        list.innerHTML = '<div class="cp-empty">未找到匹配公司（仅支持 92 家列表内公司）</div>';
+        list.style.display = 'block';
+        return;
+      }
+      list.innerHTML = items.map((c, i) =>
+        `<div class="cp-item${i === 0 ? ' active' : ''}" data-i="${i}"><span>${SHORT_NAME_MAP[c.full_name] || c.full_name}</span><span class="cp-full">${c.full_name}</span></div>`
+      ).join('');
+      list.style.display = 'block';
+    });
+    list.addEventListener('click', (e) => {
+      const el = e.target.closest('.cp-item');
+      if (el && items[+el.dataset.i]) select(items[+el.dataset.i]);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); if (items.length) select(items[0]); }
+      if (e.key === 'Escape') close();
+    });
+    input.addEventListener('blur', () => setTimeout(close, 150));
+    document.addEventListener('click', (e) => { if (!e.target.closest('.company-picker')) close(); });
+    return {
+      get value() { return val.value; },
+      get meta() { return { full: val.dataset.full, type: val.dataset.type }; },
+      isValid() { return !!val.value; },
+      clear() { input.value = ''; val.value = ''; }
+    };
+  }
 
-  // 下载 PDF（自动抓取 sources.json 映射；未配置则提示上传）
+  // 弹窗开关
+  const openOverlay = (id) => document.getElementById(id).classList.add('show');
+  const closeOverlay = (id) => document.getElementById(id).classList.remove('show');
+  document.querySelectorAll('.overlay-close').forEach(btn =>
+    btn.addEventListener('click', () => closeOverlay(btn.dataset.close)));
+  document.querySelectorAll('.overlay').forEach(ov =>
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); }));
+
+  // ---- 年报下载页 ----
+  const dlOpsStatus = document.getElementById('dlOpsStatus');
+  const setDlOps = (html, cls) => { dlOpsStatus.innerHTML = html; dlOpsStatus.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
+  const dlPicker = createCompanyPicker('dlCompanyInput', 'dlCompanyVal', 'dlCompanyList');
+  const dlYear = () => document.getElementById('dlTargetYear').value;
+
+  // 单公司下载 PDF（自动抓取 sources.json 映射；未配置则提示上传）
   document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
-    const { company, year } = getTarget();
-    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
-    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
-    setOps(`正在尝试下载 ${company} ${year} 的 PDF…`);
-    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year } });
+    const company = dlPicker.value;
+    if (!company) { setDlOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
+    if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF…`);
+    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear() } });
     if (resp.ok && data.ok && data.needUpload) {
-      setOps(`未配置 ${company} 的自动下载地址，请手动下载后点「上传 PDF」提交文件。`);
+      setDlOps(`未配置 ${company} 的自动下载地址，请手动下载后点「上传 PDF」提交文件。（可到「智能提取 → 下载地址配置」登记地址后自动抓取）`);
     } else if (resp.ok && data.ok) {
-      setOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）`, 'ok');
+      setDlOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB），可到「智能提取」页执行 AI 提取入库`, 'ok');
       localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
       renderDownloadView();
     } else {
-      setOps(`下载失败：${(data && data.error) || '未知错误'}`, 'err');
+      setDlOps(`下载失败：${(data && data.error) || '未知错误'}`, 'err');
     }
   });
 
   // 上传 PDF
   document.getElementById('btnUploadPdf').addEventListener('click', () => {
-    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
     document.getElementById('dlPdfFile').click();
   });
   document.getElementById('dlPdfFile').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const { company, year } = getTarget();
-    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
-    setOps(`正在上传 ${file.name}（${(file.size / 1024).toFixed(0)} KB）…`);
+    const company = dlPicker.value;
+    if (!company) { setDlOps('请选择目标公司后上传', 'err'); e.target.value = ''; return; }
+    setDlOps(`正在上传 ${file.name}（${(file.size / 1024).toFixed(0)} KB）…`);
     const fd = new FormData();
     fd.append('file', file);
     fd.append('company', company);
-    fd.append('year', year);
+    fd.append('year', dlYear());
     const token = getAdminToken();
     const resp = await fetch('/api/download', {
       method: 'POST',
@@ -3111,23 +3357,111 @@ function initDownloadView() {
     });
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
-      setOps(`上传成功：${data.pdfKey}，可执行「AI 提取入库」`, 'ok');
+      setDlOps(`上传成功：${data.pdfKey}，可到「智能提取」页执行 AI 提取入库`, 'ok');
       localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
       renderDownloadView();
     } else {
-      setOps(`上传失败：${(data && data.error) || resp.status}`, 'err');
+      setDlOps(`上传失败：${(data && data.error) || resp.status}`, 'err');
     }
     e.target.value = '';
   });
 
-  // AI 提取入库
-  document.getElementById('btnAiExtract').addEventListener('click', async () => {
-    const { company, year } = getTarget();
-    if (!company) { setOps('请先填写目标公司名称', 'err'); return; }
-    if (!isCloudMode) { setOps('需部署到 Cloudflare 后可用', 'err'); return; }
-    const full = COMPANIES_92.find(o => o.full_name.includes(company) || o.full_name === company);
-    const companyType = full ? full.type : '';
-    setOps(`正在 AI 提取 ${company} ${year} 的 163 行指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
+  // 批量下载（串行逐个请求，避免 Cloudflare Workers 30s 限制）
+  async function batchDownload(list, setStatus) {
+    let okN = 0, skipN = 0, failN = 0;
+    const failed = [];
+    for (let i = 0; i < list.length; i++) {
+      const company = list[i];
+      setStatus(`批量下载 ${i + 1}/${list.length}：${company} …`);
+      const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear() } });
+      if (resp.ok && data.ok && data.needUpload) {
+        skipN++;
+      } else if (resp.ok && data.ok) {
+        okN++;
+        localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+      } else {
+        failN++;
+        failed.push(company + ':' + ((data && data.error) || resp.status));
+      }
+    }
+    renderDownloadView();
+    setStatus(`批量完成：成功 ${okN} 家 / 未配置地址跳过 ${skipN} 家 / 失败 ${failN} 家${failed.length ? '（' + failed.join('；') + '）' : ''}`, okN ? 'ok' : (failN ? 'err' : ''));
+  }
+
+  // 类型下拉填充（下载页批量 + 多选弹窗共用）
+  const batchTypeSel = document.getElementById('dlBatchType');
+  batchTypeSel.innerHTML = '<option value="">全部类型</option>' +
+    COMPANIES_DATA.types.map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('bmTypeFilter').innerHTML = batchTypeSel.innerHTML;
+
+  // 按类型批量
+  document.getElementById('btnBatchByType').addEventListener('click', async () => {
+    if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    const type = batchTypeSel.value;
+    const list = COMPANIES_92.filter(c => !type || c.type === type).map(c => SHORT_NAME_MAP[c.full_name]);
+    if (!list.length) { setDlOps('该类型下无公司', 'err'); return; }
+    if (!window.confirm(`将批量下载「${type || '全部类型'}」${list.length} 家公司 PDF（未配置自动下载地址的公司会提示跳过），是否继续？`)) return;
+    setDlOps(`开始批量下载 ${list.length} 家公司…`);
+    await batchDownload(list, setDlOps);
+  });
+
+  // 多选批量弹窗
+  const bmSelected = new Set();
+  function renderBmList() {
+    const type = document.getElementById('bmTypeFilter').value;
+    const q = document.getElementById('bmSearch').value.trim();
+    const list = COMPANIES_92.filter(c =>
+      (!type || c.type === type) &&
+      (!q || c.full_name.includes(q) || (SHORT_NAME_MAP[c.full_name] || '').includes(q)));
+    document.getElementById('bmList').innerHTML = list.map(c => {
+      const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
+      return `<div class="batch-row" data-full="${c.full_name}">
+        <input type="checkbox" ${bmSelected.has(short) ? 'checked' : ''} data-short="${short}">
+        <span><b>${short}</b></span>
+        <span class="b-full">${c.full_name}</span>
+        <span class="b-type">${c.type}</span>
+      </div>`;
+    }).join('') || '<div style="padding:10px;color:var(--c-text-secondary);">无匹配公司</div>';
+    document.getElementById('bmCount').textContent = `已选 ${bmSelected.size} 家`;
+  }
+  document.getElementById('btnBatchMulti').addEventListener('click', () => {
+    if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    renderBmList();
+    openOverlay('batchMultiOverlay');
+  });
+  document.getElementById('bmTypeFilter').addEventListener('change', renderBmList);
+  document.getElementById('bmSearch').addEventListener('input', renderBmList);
+  document.getElementById('bmList').addEventListener('change', (e) => {
+    const cb = e.target;
+    if (cb.dataset.short) { if (cb.checked) bmSelected.add(cb.dataset.short); else bmSelected.delete(cb.dataset.short); }
+    document.getElementById('bmCount').textContent = `已选 ${bmSelected.size} 家`;
+  });
+  document.getElementById('bmCheckAll').addEventListener('click', () => {
+    document.querySelectorAll('#bmList input[type="checkbox"]').forEach(cb => { cb.checked = true; if (cb.dataset.short) bmSelected.add(cb.dataset.short); });
+    document.getElementById('bmCount').textContent = `已选 ${bmSelected.size} 家`;
+  });
+  document.getElementById('bmClearAll').addEventListener('click', () => { bmSelected.clear(); renderBmList(); });
+  document.getElementById('bmCancel').addEventListener('click', () => closeOverlay('batchMultiOverlay'));
+  document.getElementById('bmStart').addEventListener('click', async () => {
+    if (!bmSelected.size) { setDlOps('请先勾选公司', 'err'); return; }
+    closeOverlay('batchMultiOverlay');
+    setDlOps(`开始批量下载 ${bmSelected.size} 家公司…`);
+    await batchDownload([...bmSelected], setDlOps);
+  });
+
+  // ---- 智能提取页 ----
+  const extOpsStatus = document.getElementById('extOpsStatus');
+  const setExtOps = (html, cls) => { extOpsStatus.innerHTML = html; extOpsStatus.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
+  const extPicker = createCompanyPicker('extCompanyInput', 'extCompanyVal', 'extCompanyList');
+
+  // AI 提取入库（含勾稽验证）
+  document.getElementById('btnExtract').addEventListener('click', async () => {
+    const company = extPicker.value;
+    const year = document.getElementById('extTargetYear').value;
+    if (!company) { setExtOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
+    if (!isCloudMode) { setExtOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    const companyType = extPicker.meta.type || '';
+    setExtOps(`正在 AI 提取 ${company} ${year} 的 163 行指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
     const { resp, data } = await apiFetch('/api/extract', {
       method: 'POST',
       body: { company, year, companyType }
@@ -3138,12 +3472,61 @@ function initDownloadView() {
       let html = `提取完成：新增 ${data.rowsAdded} 行，勾稽：${checkSummary}。数据库现有 ${data.dbRows} 行。`;
       if (susp) html += `<br/><span class="err">⚠ ${susp} 项行名可疑（${data.suspicious.map(s => s.code + ':' + s.指标名称).join('、')}），请到数据库页核对</span>`;
       if ((data.checks || []).some(c => c.pass === false)) html += `<br/><span class="err">⚠ 存在未通过的勾稽项，请人工核查</span>`;
-      setOps(html, data.rowsAdded ? 'ok' : '');
+      setExtOps(html, data.rowsAdded ? 'ok' : '');
       // 刷新动态数据（云模式）
       await refreshCloudData();
     } else {
-      setOps(`提取失败：${(data && data.error) || '未知错误'}`, 'err');
+      setExtOps(`提取失败：${(data && data.error) || '未知错误'}`, 'err');
     }
+  });
+
+  // 下载地址配置（sources.json）
+  let srcMap = {};
+  const srcPicker = createCompanyPicker('srcCompanyInput', 'srcCompanyVal', 'srcCompanyList');
+  function renderSrcList() {
+    const entries = Object.entries(srcMap);
+    const list = document.getElementById('srcList');
+    if (!entries.length) { list.innerHTML = '<div style="padding:10px;color:var(--c-text-secondary);">尚未配置任何下载地址</div>'; return; }
+    list.innerHTML = entries.map(([name, v]) => {
+      const url = typeof v === 'string' ? v : (v.url || Object.values(v)[0] || '');
+      return `<div class="src-row"><span class="s-name">${name}</span><span class="s-url">${url}</span><button class="s-del" data-name="${name}">删除</button></div>`;
+    }).join('');
+  }
+  async function loadSources() {
+    try {
+      const { resp, data } = await apiFetch('/api/sources');
+      if (resp.ok && data.ok) { srcMap = data.sources || {}; renderSrcList(); }
+      else setExtOps(`读取配置失败：${(data && data.error) || resp.status}`, 'err');
+    } catch (e) { setExtOps('读取配置失败（静态模式不可用）', 'err'); }
+  }
+  document.getElementById('btnSourcesConfig').addEventListener('click', async () => {
+    if (!isCloudMode) { setExtOps('需部署到 Cloudflare 后可用', 'err'); return; }
+    openOverlay('sourcesOverlay');
+    await loadSources();
+  });
+  document.getElementById('srcAdd').addEventListener('click', () => {
+    const name = srcPicker.value;
+    const url = document.getElementById('srcUrl').value.trim();
+    if (!name) { setExtOps('请先选择公司', 'err'); return; }
+    if (!/^https?:\/\//.test(url)) { setExtOps('请输入合法的 http(s) 地址', 'err'); return; }
+    srcMap[name] = { url };
+    srcPicker.clear();
+    document.getElementById('srcUrl').value = '';
+    renderSrcList();
+    setExtOps('已添加，关闭弹窗时保存生效', 'ok');
+  });
+  document.getElementById('srcList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.s-del');
+    if (!btn) return;
+    delete srcMap[btn.dataset.name];
+    renderSrcList();
+    setExtOps('已删除，关闭弹窗时保存生效', 'ok');
+  });
+  document.getElementById('srcClose').addEventListener('click', async () => {
+    const { resp, data } = await apiFetch('/api/sources', { method: 'POST', body: { sources: srcMap } });
+    if (resp.ok && data.ok) setExtOps(`下载地址配置已保存（${data.count} 家），「下载 PDF」即刻生效`, 'ok');
+    else setExtOps(`保存失败：${(data && data.error) || resp.status}`, 'err');
+    closeOverlay('sourcesOverlay');
   });
 }
 
