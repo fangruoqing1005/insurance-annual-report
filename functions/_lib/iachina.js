@@ -162,26 +162,34 @@ export function createIachinaClient({ timeout = 15000, sleepMs = DEFAULT_SLEEP }
     },
 
     // 按 公司名（简称/全称）+ 年度 过滤列表。
-    // 全称匹配优先且精确：有全称匹配时只返回全称匹配的记录（避免「中国人寿」命中财险/资管子公司）。
+    // 分层匹配（前一层有结果就不用后一层，避免「中国人寿」命中财险/资管子公司）：
+    //   1. 全称精确匹配（title 含 fullName）
+    //   2. 核心名匹配（去「保险股份有限公司/有限责任公司」等后缀）——
+    //      兼容公司注册类型变更：如泰康人寿 股份有限公司(2016前) → 有限责任公司(2016后)
+    //   3. 简称匹配
     async search(company, fullName, year) {
       const lst = await this.loadList();
       if (!lst.ok) return lst;
       const yearNum = String(year || '').replace(/\s+/g, '').replace(/年度$/, '').replace(/年$/, '');
       const full = (fullName || '').trim();
       const short = (company || '').trim();
-      const matched = lst.records.filter(r => {
-        const t = r.title || '';
-        if (!t) return false;
-        const nameHit = (full && t.includes(full)) || (!full && short && t.includes(short));
-        if (!nameHit) return false;
-        if (yearNum) {
-          return t.includes(yearNum + '年年度') || t.includes(yearNum + '年度');
-        }
-        return t.includes('年度');
-      });
-      if (full) {
-        const fullOnly = matched.filter(r => r.title.includes(full));
-        if (fullOnly.length) return { ok: true, records: fullOnly };
+      const coreOf = s => (s || '')
+        .replace(/保险股份有限公司$/, '')
+        .replace(/保险有限责任公司$/, '')
+        .replace(/保险有限公司$/, '')
+        .replace(/股份有限公司$/, '')
+        .replace(/有限责任公司$/, '')
+        .replace(/有限公司$/, '');
+      // 关键字按特异性降序：全称 → 全称核心名 → 简称核心名 → 简称
+      const keywords = [...new Set([full, coreOf(full), coreOf(short), short].filter(k => k && k.length >= 2))];
+      const yearOk = t => !yearNum || t.includes(yearNum + '年年度') || t.includes(yearNum + '年度');
+      let matched = [];
+      for (const kw of keywords) {
+        const hits = lst.records.filter(r => {
+          const t = r.title || '';
+          return t.includes(kw) && t.includes('年度') && yearOk(t);
+        });
+        if (hits.length) { matched = hits; break; }
       }
       return { ok: true, records: matched };
     },

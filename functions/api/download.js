@@ -160,6 +160,43 @@ export async function onRequest({ request, env }) {
       // ===== 单公司下载 =====
       const company = normalizeCompany((body.company || '').trim(), sources);
       if (!company) return fail('缺少 company 参数');
+
+      // ===== 诊断模式：检查中保协链路各环节（含 GBK 解码）=====
+      if (body.debug) {
+        const client = createIachinaClient();
+        const s = await client.ensureSession();
+        const diag = { session: s.ok ? 'ok' : s.error };
+        if (s.ok) {
+          try {
+            const lst = await client.loadList();
+            diag.listOk = lst.ok;
+            diag.listCount = lst.ok ? lst.records.length : 0;
+            diag.listError = lst.error || null;
+            diag.sampleTitles = lst.ok ? lst.records.slice(0, 5).map(r => r.title) : [];
+            if (lst.ok && company) {
+              const kw = fullName || company;
+              const hits = lst.records.filter(r => (r.title || '').includes(kw));
+              diag.searchKeyword = kw;
+              diag.searchHitCount = hits.length;
+              diag.searchHits = hits.slice(0, 10).map(r => ({ title: r.title, date: r.date }));
+            }
+          } catch (e) {
+            diag.listOk = false;
+            diag.listError = e.message;
+          }
+          try {
+            const probe = new TextDecoder('gbk');
+            diag.gbkSupported = true;
+            const probeBuf = new Uint8Array([0xD6, 0xD0, 0xB1, 0xA3, 0xD0, 0xAD]);
+            diag.gbkProbe = probe.decode(probeBuf); // 应为「中保协」
+          } catch (e) {
+            diag.gbkSupported = false;
+            diag.gbkError = e.message;
+          }
+        }
+        return ok({ debug: true, diag });
+      }
+
       return downloadOne(env, { company, fullName, year, url: body.url }, sources);
     }
   });
