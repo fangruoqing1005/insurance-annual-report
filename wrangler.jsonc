@@ -6,12 +6,16 @@
   // 必须包含 pages_build_output_dir，否则 Git 集成构建时本配置被跳过
   // （nodejs_compat / vars 均不会生效）。静态文件在仓库根目录，故设为 "."
   "pages_build_output_dir": ".",
-  // KV 绑定请在 Dashboard 手动配置（Settings → Functions → KV namespace bindings → STORE）
+  // KV 绑定：因 Pages 项目通过 wrangler.jsonc 管理，Dashboard 的 +Add 被禁用，
+  // 必须在此声明并在部署后生效。变量名必须是 STORE，代码中通过 env.STORE 访问。
   "vars": {
     "DB_KEY": "raw_data.json",
     "TPL_KEY": "template_163.json",
     "PDF_PREFIX": "pdfs/",
     "STATUS_KEY": "status.json",
     "SOURCES_KEY": "sources.json"
-  }
+  },
+  "kv_namespaces": [
+    { "binding": "STORE", "id": "f21a90ac27e7425894910e27a5892521" }
+  ]
 }

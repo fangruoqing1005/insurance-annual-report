@@ -1855,8 +1855,14 @@ async function initCloudMode() {
   try {
     const { resp, data } = await apiFetch('/api/data');
     if (resp.ok && data && Array.isArray(data.rows)) {
-      isCloudMode = true;
-      applyCloudData(data.rows);
+      if (data.cloudReady === false) {
+        // 接口可达但存储绑定缺失：云端写入功能实际不可用，按静态模式处理
+        isCloudMode = false;
+        console.warn('Cloudflare API reachable but STORE binding missing');
+      } else {
+        isCloudMode = true;
+        applyCloudData(data.rows);
+      }
     } else if (resp.status === 401) {
       // 接口存在但需管理密码（管理员设置了 ADMIN_PASS）：仍算云模式，提示输入密码后重新加载
       isCloudMode = true;
@@ -3555,7 +3561,15 @@ function initDownloadView() {
     setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF（未登记地址时将自动从中保协披露系统搜索）…`);
     const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName, localSave: true } });
     if (resp.ok && data.ok && data.needUpload) {
-      setDlOps(`下载失败：${data.message || '未配置下载地址'}${data.notFound ? '' : '（可手动下载后点「上传 PDF」提交，或在「智能提取 → 下载地址配置」登记直链）'}`, 'err');
+      let html = `下载失败：${data.message || '未配置下载地址'}${data.notFound ? '' : '（可手动下载后点「上传 PDF」提交，或在「智能提取 → 下载地址配置」登记直链）'}`;
+      if (data.base64) {
+        html = `PDF 已抓取，但云端存储未配置（未保存到服务器）。<br><span style="color:#8A6A2E;font-size:11px;">${data.message || ''}</span><br><button class="btn-apply" id="btnSaveLocal" style="width:auto;padding:5px 12px;font-size:12px;margin-top:6px;">💾 保存 PDF 到本地</button>`;
+      }
+      setDlOps(html, data.base64 ? '' : 'err');
+      if (data.base64) {
+        const saveBtn = document.getElementById('btnSaveLocal');
+        if (saveBtn) saveBtn.addEventListener('click', () => savePdfLocal(data.base64, `${company}_${dlYear()}.pdf`));
+      }
     } else if (resp.ok && data.ok) {
       const srcTxt = data.source === 'iachina' ? `（中保协自动抓取：${data.title || ''}）` : '';
       let html = `下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）${srcTxt}，可到「智能提取」页执行 AI 提取入库。`;

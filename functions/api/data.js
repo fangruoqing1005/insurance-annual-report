@@ -17,7 +17,8 @@ export async function onRequest({ request, env }) {
         const indicators = [...new Set(rows.map(r => r['指标编号']))];
         return ok({
           rows,
-          stats: { total: rows.length, companies: companies.length, periods, indicators: indicators.length }
+          stats: { total: rows.length, companies: companies.length, periods, indicators: indicators.length },
+          cloudReady: !!env.STORE
         });
       }
 

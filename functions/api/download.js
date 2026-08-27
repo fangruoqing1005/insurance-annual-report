@@ -53,7 +53,9 @@ async function fetchFromIachina(env, { company, fullName, year }, client, withBa
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
   const saved = await storePut(env.STORE, key, r.buf, 'application/pdf');
   if (!saved) {
-    return { ok: false, needUpload: true, error: 'PDF 抓取成功但存储写入失败（检查 Cloudflare 存储绑定是否配置：Settings → Functions → KV/R2 bindings → STORE）' };
+    const err = 'PDF 抓取成功但存储写入失败（检查 Cloudflare 存储绑定是否配置：Settings → Functions → KV/R2 bindings → STORE）';
+    if (withBase64) return { ok: false, needUpload: true, error: err, base64: bufToBase64(r.buf), bytes: r.buf.byteLength };
+    return { ok: false, needUpload: true, error: err };
   }
   const res = {
     ok: true,
