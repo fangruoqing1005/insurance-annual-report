@@ -682,6 +682,21 @@ body {
 }
 .chart-body { padding: 12px 12px 16px; height: 340px; }
 .chart-body.table-body { height: auto; padding: 8px 16px 16px; overflow-x: auto; }
+/* 图表自动解读 */
+.chart-insight {
+  padding: 8px 16px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--c-text-secondary);
+  border-top: 1px dashed var(--c-border-light);
+  background: var(--c-bg);
+  display: none;
+}
+.chart-insight::before {
+  content: '📊 解读 ';
+  font-weight: 700;
+  color: var(--c-navy);
+}
 
 /* ===== Data Table ===== */
 .data-table-wrap { overflow-x: auto; }
@@ -1209,6 +1224,9 @@ body {
       <div class="sub">Annual Report Workbench</div>
     </div>
     <nav class="sidebar-nav">
+      <div class="nav-item active" id="navOverview">
+        <i class="icon fa-solid fa-table-columns"></i><span>概览</span>
+      </div>
       <div class="nav-item" id="navDownload">
         <i class="icon fa-solid fa-cloud-arrow-down"></i><span>年报下载</span>
       </div>
@@ -1227,6 +1245,12 @@ body {
       <div class="nav-sub" data-sub="investment-service"><span>投资服务业绩</span></div>
       <div class="nav-sub" data-sub="key-monitor"><span>关键监测指标</span></div>
       <div class="nav-sub" data-sub="disclosure"><span>其他披露信息</span></div>
+      <div class="nav-item" id="navDiscount">
+        <i class="icon fa-solid fa-percent"></i><span>折现率</span>
+      </div>
+      <div class="nav-item" id="navAsk">
+        <i class="icon fa-solid fa-robot"></i><span>问问 Agent</span>
+      </div>
       <div class="nav-item disabled" style="margin-top: 8px;">
         <i class="icon fa-solid fa-gear"></i><span>大模型设置</span>
         <span class="badge">待开发</span>
@@ -1433,35 +1457,64 @@ body {
       </div>
     </div>
 
+    <!-- 概览 View：92家公司总览 -->
+    <div class="page-view" id="overviewView" style="display:none;">
+      <div class="page-header">
+        <h2>概览</h2>
+        <span class="page-sub">92 家寿险公司新准则披露情况总览 · 数据年度与筛选</span>
+      </div>
+
+      <!-- 统计卡片 -->
+      <div class="stat-cards" id="ovStatCards"></div>
+
+      <!-- 筛选栏 -->
+      <div class="dl-controls">
+        <label>数据年度：</label>
+        <select id="ovYearFilter"><option value="">全部年度</option></select>
+        <label>公司类型：</label>
+        <select id="ovTypeFilter"><option value="">全部类型</option></select>
+        <label>准则适用：</label>
+        <select id="ovStdFilter"><option value="">全部</option></select>
+        <label>搜索：</label>
+        <input type="text" id="ovSearch" placeholder="公司全称 / 简称关键词">
+        <span class="dl-count" id="ovCount"></span>
+        <button class="btn-reset" id="ovReset">重置</button>
+      </div>
+
+      <div class="db-card" style="margin-bottom:14px;">
+        <div class="dl-controls" style="margin:0;border:0;padding:0 0 10px;background:transparent;">
+          <span style="font-weight:700;color:var(--c-navy);">公司类型分布</span>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+          <div id="ovTypeChart" style="width:320px;height:280px;"></div>
+          <div id="ovTypeLegend" style="flex:1;min-width:180px;padding-top:20px;"></div>
+        </div>
+      </div>
+
+      <div class="db-card" style="margin-bottom:14px;">
+        <div class="dl-controls" style="margin:0;border:0;padding:0 0 10px;background:transparent;">
+          <span style="font-weight:700;color:var(--c-navy);">新准则执行进度（历年新增家数）</span>
+        </div>
+        <div id="ovYearChart" style="width:100%;height:300px;"></div>
+      </div>
+
+      <div class="db-card">
+        <div class="dl-controls" style="margin:0;border:0;padding:0 0 10px;background:transparent;">
+          <span style="font-weight:700;color:var(--c-navy);">92 家公司清单</span>
+        </div>
+        <div class="dl-table-wrap" id="ovTableContainer"></div>
+      </div>
+    </div>
+
     <!-- 年报下载 View：92家公司分类总览 + PDF下载状态 -->
     <div class="page-view" id="downloadView" style="display:none;">
       <div class="page-header">
         <h2>年报下载</h2>
-        <span class="page-sub">92 家寿险公司新准则披露情况总览 · PDF 年报下载管理</span>
+        <span class="page-sub">PDF 年报下载管理 · 已下载记录</span>
       </div>
 
       <!-- 统计卡片 -->
       <div class="stat-cards" id="dlStatCards"></div>
-
-      <!-- 筛选栏 -->
-      <div class="dl-controls">
-        <label>公司类型：</label>
-        <select id="dlTypeFilter"><option value="">全部类型</option></select>
-        <label>准则适用：</label>
-        <select id="dlStdFilter"><option value="">全部</option></select>
-        <label>搜索：</label>
-        <input type="text" id="dlSearch" placeholder="公司全称 / 简称关键词">
-        <span class="dl-count" id="dlCount"></span>
-        <button class="btn-reset" id="dlReset">重置</button>
-      </div>
-
-      <div class="dl-note">
-        <i class="fa-solid fa-circle-info" style="font-size:11px;"></i>
-        获取渠道：① 中国保险行业协会年度信息披露栏目（优先）→ ② 各公司官网「公开信息披露」→ 附件。
-        注意区分《年度信息披露报告》(简版，部分无附注) 与《年度财务报表及审计报告》(必须用后者)；命名规范
-        <code>{公司全称}_{年度}年年度报告.pdf</code>。
-        <span class="cloud-only" style="margin-left:6px;">云模式：选择目标公司后点「下载 PDF」——自动抓取会优先查询已登记的下载地址，未登记的公司将自动从中保协信息披露系统搜索下载（覆盖全部险企、支持任意年度）；手动下载的 PDF 可点「上传 PDF」提交；AI 提取入库在「智能提取」页执行。</span>
-      </div>
 
       <!-- 云模式操作区 -->
       <div class="dl-ops cloud-only" id="dlOps" style="display:none;">
@@ -1497,8 +1550,16 @@ body {
         <div class="dl-ops-status" id="dlOpsStatus" style="width:100%;max-width:none;"></div>
       </div>
 
+      <!-- 已下载 PDF 记录（真实探测云端存储） -->
       <div class="db-card" style="margin-top:10px;">
-        <div class="dl-table-wrap" id="dlTableContainer"></div>
+        <div class="dl-controls" style="margin:0;border:0;padding:0 0 10px;background:transparent;">
+          <span style="font-weight:700;color:var(--c-navy);">已下载 PDF 记录</span>
+          <span style="font-size:11px;color:var(--c-text-muted);margin-left:auto;">云模式：自动探测 Cloudflare 存储中已存在的 PDF；静态模式显示本地 localStorage 记录</span>
+          <button class="btn-reset" id="btnRefreshPdfStatus" style="margin-left:8px;">刷新状态</button>
+        </div>
+        <div class="dl-table-wrap" id="dlPdfRecordsContainer">
+          <div style="padding:24px;text-align:center;color:var(--c-text-muted);">点击「刷新状态」探测已下载 PDF</div>
+        </div>
       </div>
     </div>
 
@@ -1640,8 +1701,101 @@ body {
       </div>
     </div>
 
+    <!-- 折现率 View -->
+    <div class="page-view" id="discountView" style="display:none;">
+      <div class="page-header">
+        <h2>折现率</h2>
+        <span class="page-sub">中债登 · 保险合同准备金计量基准收益率曲线计算</span>
+      </div>
+
+      <div class="db-card">
+        <div class="dl-controls" style="margin:0;border:0;padding:0 0 10px;background:transparent;flex-wrap:wrap;">
+          <label>数据日期（工作日）</label>
+          <input type="date" id="dcDate" style="width:150px;">
+          <label>参数设定</label>
+          <select id="dcCsz" style="width:160px;">
+            <option value="1">1-当日线</option>
+            <option value="750">750日移动平均</option>
+          </select>
+          <label>前20年溢价%</label>
+          <input type="number" id="dcS20" value="0.25" step="0.01" min="0" max="10" style="width:90px;">
+          <label>40年后溢价%</label>
+          <input type="number" id="dcS40" value="0.15" step="0.01" min="0" max="10" style="width:90px;">
+          <label>UFR%</label>
+          <input type="number" id="dcUfr" value="4.50" step="0.05" min="0" max="10" style="width:90px;">
+          <button class="btn-apply" id="dcRunBtn">运行计算</button>
+          <span id="dcStatus" style="font-size:12px;color:var(--c-text-muted);"></span>
+        </div>
+        <div class="dl-controls" style="margin:0;border:0;padding:0;background:transparent;">
+          <label>折现率服务</label>
+          <input id="dcUrl" value="http://127.0.0.1:8790" style="width:200px;">
+          <label>历史记录</label>
+          <select id="dcSel"></select>
+          <button class="btn-reset" id="dcDownloadBtn">下载该期Excel</button>
+        </div>
+        <div style="font-size:11px;color:var(--c-text-muted);margin-top:8px;line-height:1.6;">
+          选择任意工作日 → 参数设定 → 调整溢价 → 点运行。自动下载中债登当日数据、计算、对比上一期前20年差异、导出Excel。<b>需先启动折现率后端服务（默认端口8790）</b>。
+        </div>
+      </div>
+
+      <div class="stat-cards" id="dcCards"></div>
+
+      <div class="db-card" style="margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--c-navy);margin-bottom:10px;">即期收益率+溢价 曲线对比</div>
+        <div id="dcChart" style="width:100%;height:360px;"></div>
+      </div>
+
+      <div class="db-card" style="margin-bottom:14px;">
+        <div style="font-weight:700;color:var(--c-navy);margin-bottom:10px;">前20年 当月 vs 基准日 差异明细</div>
+        <div id="dcDiffSub" style="font-size:11px;color:var(--c-text-muted);margin-bottom:8px;"></div>
+        <div class="dl-table-wrap" id="dcDiffTable"></div>
+      </div>
+
+      <div class="db-card">
+        <details>
+          <summary style="font-weight:700;color:var(--c-navy);cursor:pointer;">展开 / 收起完整明细（当月 0~50 年）</summary>
+          <div class="dl-table-wrap" id="dcDetailTable" style="margin-top:10px;"></div>
+        </details>
+      </div>
+    </div>
+
+    <!-- 问问 Agent View -->
+    <div class="page-view" id="askView" style="display:none;">
+      <div class="page-header">
+        <h2>问问 Agent</h2>
+        <span class="page-sub">基于当前已加载指标数据的离线问答与对比分析</span>
+      </div>
+
+      <div class="db-card" style="padding:0;max-width:1000px;margin:0 auto 20px;">
+        <div style="padding:16px 20px 0;">
+          <div style="font-size:12px;color:var(--c-text-muted);margin-top:2px;">
+            可以查数值、排名、同比，也能做跨公司对比分析。例如：「中国人寿2025年的净利润是多少？」「2025年净利润排名前五的公司」「平安人寿和太平洋人寿2025年对比」
+          </div>
+        </div>
+        <div style="padding:14px 20px;">
+          <div id="askChat" style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:4px;height:52vh;min-height:320px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:flex-start;">
+              <div style="max-width:78%;padding:9px 13px;border-radius:10px;font-size:13px;line-height:1.6;background:var(--c-surface);border:1px solid var(--c-border);color:var(--c-text-primary);">
+                你好，我是问问 Agent 👋 可以查数值、排名、同比，也能做跨公司对比分析。<br>例如：<br>· “中国人寿2025年的保险服务收入是多少？”<br>· “2025年净利润排名前五的公司”<br>· “平安人寿和太平洋人寿2025年对比”
+              </div>
+            </div>
+          </div>
+          <div id="askQuick" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+            <button class="btn-reset" onclick="askQuick('中国人寿2025年的保险服务收入是多少？')">中国人寿保险服务收入</button>
+            <button class="btn-reset" onclick="askQuick('2025年净利润排名前五的公司')">2025净利润Top5</button>
+            <button class="btn-reset" onclick="askQuick('平安人寿和太平洋人寿2025年对比')">平安vs太保</button>
+            <button class="btn-reset" onclick="askQuick('泰康人寿2025年的CSM余额是多少？')">泰康CSM余额</button>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            <input id="askInput" placeholder="输入问题，如：2025年净利润排名前五的公司" style="flex:1;padding:10px 14px;border:1px solid var(--c-border);border-radius:4px;font-size:14px;" onkeydown="if(event.key==='Enter')askSend()">
+            <button class="btn-apply" onclick="askSend()" style="padding:10px 22px;">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
-      保险公司年报分析工作台 v0.8 · 数据来源：上市保险公司年报 · 仅供参考
+      保险公司年报分析工作台 v0.9 · 数据来源：上市保险公司年报 · 仅供参考
     </div>
   </div>
 </div>
@@ -1765,30 +1919,39 @@ const state = {
 };
 const appliedState = { periods: [], types: [], companies: [] };
 let currentSubPage = 'key-ops';
-let currentView = 'analysis'; // 'analysis' | 'database'
+let currentView = 'overview'; // 'overview' | 'download' | 'extract' | 'database' | 'analysis' | 'discount' | 'ask'
 let hasApplied = false;
 
 // ============== View Switch ==============
-const VIEW_IDS = ['filterBar', 'selectedSummary', 'chartGrid', 'dbView', 'downloadView', 'extractView'];
+const VIEW_IDS = ['filterBar', 'selectedSummary', 'chartGrid', 'dbView', 'overviewView', 'downloadView', 'extractView', 'discountView', 'askView'];
 function switchView(view) {
   currentView = view;
   // 数据分析页显示筛选栏/图表区；其他页隐藏
   const isAnalysis = view === 'analysis';
   const isDb = view === 'database';
+  const isOverview = view === 'overview';
   const isDownload = view === 'download';
   const isExtract = view === 'extract';
+  const isDiscount = view === 'discount';
+  const isAsk = view === 'ask';
   document.getElementById('filterBar').style.display = isAnalysis ? 'flex' : 'none';
   document.getElementById('selectedSummary').style.display = isAnalysis ? 'flex' : 'none';
   document.getElementById('chartGrid').style.display = isAnalysis ? 'grid' : 'none';
   document.getElementById('dbView').style.display = isDb ? 'block' : 'none';
+  document.getElementById('overviewView').style.display = isOverview ? 'block' : 'none';
   document.getElementById('downloadView').style.display = isDownload ? 'block' : 'none';
   document.getElementById('extractView').style.display = isExtract ? 'block' : 'none';
+  document.getElementById('discountView').style.display = isDiscount ? 'block' : 'none';
+  document.getElementById('askView').style.display = isAsk ? 'block' : 'none';
   // 子页面导航只在数据分析页显示
   document.querySelectorAll('.nav-sub').forEach(n => n.style.display = isAnalysis ? '' : 'none');
+  document.getElementById('navOverview').classList.toggle('active', isOverview);
   document.getElementById('navDownload').classList.toggle('active', isDownload);
   document.getElementById('navExtract').classList.toggle('active', isExtract);
   document.getElementById('navDatabase').classList.toggle('active', isDb);
   document.getElementById('navAnalysis').classList.toggle('active', isAnalysis);
+  document.getElementById('navDiscount').classList.toggle('active', isDiscount);
+  document.getElementById('navAsk').classList.toggle('active', isAsk);
   // 云模式专属区域显隐
   const cloudOn = isCloudMode;
   document.getElementById('dlOps').style.display = cloudOn && isDownload ? '' : 'none';
@@ -1796,8 +1959,10 @@ function switchView(view) {
   document.getElementById('extTplMgmt').style.display = cloudOn && isExtract ? '' : 'none';
   document.getElementById('extOps').style.display = cloudOn && isExtract ? '' : 'none';
   if (isDb) renderDatabase();
+  if (isOverview) renderOverviewView();
   if (isDownload) renderDownloadView();
   if (isExtract) renderExtractView();
+  if (isDiscount) dcLoadRecords();
 }
 
 // ============== Dropdown Logic ==============
@@ -1982,10 +2147,13 @@ function renderSelectedChips() {
 
 // ============== Sidebar Navigation ==============
 function initSidebar() {
+  document.getElementById('navOverview').addEventListener('click', () => switchView('overview'));
   document.getElementById('navDownload').addEventListener('click', () => switchView('download'));
   document.getElementById('navExtract').addEventListener('click', () => switchView('extract'));
   document.getElementById('navDatabase').addEventListener('click', () => switchView('database'));
   document.getElementById('navAnalysis').addEventListener('click', () => switchView('analysis'));
+  document.getElementById('navDiscount').addEventListener('click', () => switchView('discount'));
+  document.getElementById('navAsk').addEventListener('click', () => switchView('ask'));
   document.querySelectorAll('.nav-sub').forEach(el => {
     el.addEventListener('click', () => {
       switchView('analysis');
@@ -3086,15 +3254,99 @@ function buildChartCards() {
       exportHtml,
       '  </div>',
       '  <div class="' + bodyCls + '" ' + bodyStyle + '><div id="' + spec.id + '" style="width:100%;height:100%;"></div></div>',
+      '  <div class="chart-insight" id="' + spec.id + '_insight"></div>',
       '</div>'
     ].join('\n');
   }).join('\n');
 }
 
+// ============== 图表自动解读（基于当前筛选数据的模板化分析） ==============
+// 每个图表卡片下方随渲染生成一句解读：单指标→极值+排名+跨期变化；多指标→结构占比
+function fillChartInsight(spec) {
+  const el = document.getElementById(spec.id + '_insight');
+  if (!el) return;
+  const reportPeriods = (appliedState.periods && appliedState.periods.length) ? appliedState.periods : ['2025年度'];
+  const data = filterChartData(spec, appliedState.companies, reportPeriods);
+  const hasData = data.some(d => spec.indicators.some(ind => d.values[ind] !== null));
+  if (!hasData) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = '';
+
+  const unit = (spec.unit === '%') ? '%' : '亿元';
+  const fmt = (v) => {
+    if (v === null || v === undefined || isNaN(Number(v))) return '无数据';
+    const n = Number(v);
+    if (unit === '%') return (n * 100).toFixed(1) + '%';
+    return n.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' 亿';
+  };
+  const okVals = (arr) => arr.filter(x => x.v !== null && x.v !== undefined && !isNaN(Number(x.v)));
+  const mean = (arr) => arr.length ? arr.reduce((s, x) => s + Number(x.v), 0) / arr.length : null;
+
+  const parts = [];
+  // 指标显示名（取 config.displayNames 或 指标编号）
+  const indNames = spec.indicators.map((c, i) => (spec.displayNames && spec.displayNames[i]) || c);
+
+  if (spec.chartType === 'table') {
+    // 表格：横向给一行概述（覆盖公司数、有数据公司数）
+    const covered = new Set(data.filter(d => spec.indicators.some(i => d.values[i] !== null)).map(d => d.company));
+    el.textContent = `共覆盖 ${covered.size} 家公司的数据（筛选 ${data.length ? new Set(data.map(d=>d.company)).size : 0} 家公司、${reportPeriods.join('/')}）。`;
+    return;
+  }
+
+  if (spec.indicators.length === 1) {
+    // 单指标：极值 + 跨期变化
+    const code = spec.indicators[0];
+    const name = indNames[0];
+    const all = [];
+    data.forEach(d => all.push({ c: d.company, rp: d.reportPeriod, v: d.values[code] }));
+    const valid = okVals(all);
+    if (!valid.length) { el.textContent = `所选公司暂无「${name}」数据。`; return; }
+    const max = valid.reduce((a, b) => (Number(a.v) > Number(b.v) ? a : b));
+    const min = valid.reduce((a, b) => (Number(a.v) < Number(b.v) ? a : b));
+    const avg = mean(valid);
+    // 多报告期：最新 vs 上一期（同一公司口径）
+    const rps = [...new Set(data.map(d => d.reportPeriod))];
+    let trendTxt = '';
+    if (rps.length >= 2 && data.length > 0) {
+      const cur = data.filter(d => d.reportPeriod === rps[rps.length - 1]).map(d => ({ c: d.company, v: d.values[code] }));
+      const pre = data.filter(d => d.reportPeriod === rps[0]).map(d => ({ c: d.company, v: d.values[code] }));
+      const curV = okVals(cur), preV = okVals(pre);
+      if (curV.length && preV.length) {
+        const cAvg = mean(curV), pAvg = mean(preV);
+        if (cAvg !== null && pAvg !== null && pAvg !== 0) {
+          const chg = (cAvg - pAvg) / Math.abs(pAvg);
+          trendTxt = `相比${rps[0]}，${rps[rps.length - 1]}平均${name}${chg >= 0 ? '上升' : '下降'}${Math.abs(chg * 100).toFixed(1)}%（${fmt(pAvg)} → ${fmt(cAvg)}）。`;
+        }
+      }
+    }
+    let sent = `在筛选范围内（${new Set(data.map(d=>d.company)).size}家公司、${reportPeriods.join('/')}），「${name}」最高为${max.c}（${fmt(max.v)}${max.rp !== reportPeriods[0] ? '，' + max.rp : ''}），最低为${min.c}（${fmt(min.v)}），平均 ${fmt(avg)}。`;
+    if (trendTxt) sent += ' ' + trendTxt;
+    el.textContent = sent;
+  } else {
+    // 多指标：结构占比（求和后看最大组成）
+    const sums = {};
+    data.forEach(d => spec.indicators.forEach((code, i) => {
+      const v = d.values[code];
+      if (v !== null && v !== undefined && !isNaN(Number(v))) sums[indNames[i]] = (sums[indNames[i]] || 0) + Number(v);
+    }));
+    const entries = Object.entries(sums).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) { el.textContent = '所选公司暂无数据。'; return; }
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+    const top = entries[0];
+    const topPct = total ? (top[1] / total * 100).toFixed(1) : '0.0';
+    let sent = `在筛选范围内，${entries.length} 个组成部分合计 ${fmt(total)}，「${top[0]}」占比最高（${topPct}%）`;
+    if (entries[1]) sent += `，其次为「${entries[1][0]}」（${total ? (entries[1][1] / total * 100).toFixed(1) : '0.0'}%）`;
+    sent += '。';
+    el.textContent = sent;
+  }
+}
+
 function renderCharts() {
   refreshThemeColors();
   const specs = CHART_CONFIGS.filter(c => c.subPage === currentSubPage);
-  specs.forEach(spec => renderChart(spec));
+  specs.forEach(spec => {
+    renderChart(spec);
+    fillChartInsight(spec);
+  });
 }
 
 // ============== Database View ==============
@@ -3213,36 +3465,13 @@ function renderDatabase() {
   `;
 }
 
-// ============== 年报下载 View（92家总览 + PDF状态） ==============
+// ============== 年报下载 View（已下载 PDF 管理） ==============
 const STD_CLASS = {'新准则': 'std-new', '旧准则': 'std-old', '暂缓披露': 'std-delay', '不适用': 'std-na'};
-let dlState = {type: '', std: '', search: ''};
 
 function initDownloadView() {
-  const typeSel = document.getElementById('dlTypeFilter');
-  typeSel.innerHTML = '<option value="">全部类型</option>' +
-    COMPANIES_92_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
-  const stdSel = document.getElementById('dlStdFilter');
-  stdSel.innerHTML = '<option value="">全部</option>' +
-    ['新准则', '旧准则', '暂缓披露', '不适用'].map(s => `<option value="${s}">${s}</option>`).join('');
-  typeSel.addEventListener('change', () => { dlState.type = typeSel.value; renderDownloadView(); });
-  stdSel.addEventListener('change', () => { dlState.std = stdSel.value; renderDownloadView(); });
-  document.getElementById('dlSearch').addEventListener('input', e => {
-    dlState.search = e.target.value.trim(); renderDownloadView();
-  });
-  document.getElementById('dlReset').addEventListener('click', () => {
-    dlState = {type: '', std: '', search: ''};
-    typeSel.value = ''; stdSel.value = ''; document.getElementById('dlSearch').value = '';
-    renderDownloadView();
-  });
-  // PDF 状态点击
-  document.getElementById('dlTableContainer').addEventListener('click', e => {
-    const btn = e.target.closest('.pdf-btn');
-    if (!btn) return;
-    const name = btn.dataset.name;
-    const store = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
-    if (store[name]) delete store[name]; else store[name] = 1;
-    localStorage.setItem('dl_pdf_status', JSON.stringify(store));
-    renderDownloadView();
+  // 刷新已下载 PDF 记录
+  document.getElementById('btnRefreshPdfStatus').addEventListener('click', () => {
+    renderPdfRecords();
   });
 
   // ===== 云模式操作区（年报下载页 + 智能提取页）=====
@@ -3252,6 +3481,10 @@ function initDownloadView() {
   };
   fillYearsInto(document.getElementById('dlTargetYear'));
   fillYearsInto(document.getElementById('extTargetYear'));
+  // 切换目标年度时刷新已下载 PDF 记录
+  document.getElementById('dlTargetYear').addEventListener('change', () => {
+    renderDownloadView();
+  });
 
   // 公司联想选择器组件（92家限定：输入过滤 + 必须从列表选）
   function createCompanyPicker(inputId, valId, listId) {
@@ -3324,13 +3557,21 @@ function initDownloadView() {
     if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
     const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || '';
     setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF（未登记地址时将自动从中保协披露系统搜索）…`);
-    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName } });
+    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName, localSave: true } });
     if (resp.ok && data.ok && data.needUpload) {
       setDlOps(`下载失败：${data.message || '未配置下载地址'}${data.notFound ? '' : '（可手动下载后点「上传 PDF」提交，或在「智能提取 → 下载地址配置」登记直链）'}`, 'err');
     } else if (resp.ok && data.ok) {
       const srcTxt = data.source === 'iachina' ? `（中保协自动抓取：${data.title || ''}）` : '';
-      setDlOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）${srcTxt}，可到「智能提取」页执行 AI 提取入库`, 'ok');
-      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+      let html = `下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）${srcTxt}，可到「智能提取」页执行 AI 提取入库。`;
+      html += `<br><span style="color:#8A6A2E;font-size:11px;">提示：Cloudflare KV 存储可能存在 1-3 分钟全球同步延迟，若提取页暂时未找到，请稍后刷新页面或点「刷新状态」。</span>`;
+      if (data.base64) {
+        html += `<br><button class="btn-apply" id="btnSaveLocal" style="width:auto;padding:5px 12px;font-size:12px;margin-top:6px;">💾 保存 PDF 到本地</button>`;
+      }
+      setDlOps(html, 'ok');
+      const saveBtn = document.getElementById('btnSaveLocal');
+      if (saveBtn) saveBtn.addEventListener('click', () => savePdfLocal(data.base64, `${company}_${dlYear()}.pdf`));
+      const key = getPdfStatusKey((COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company, dlYear());
+      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [key]: 1 }));
       renderDownloadView();
     } else {
       setDlOps(`下载失败：${(data && data.error) || '未知错误'}`, 'err');
@@ -3361,7 +3602,8 @@ function initDownloadView() {
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
       setDlOps(`上传成功：${data.pdfKey}，可到「智能提取」页执行 AI 提取入库`, 'ok');
-      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+      const upKey = getPdfStatusKey((COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company, dlYear());
+      localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [upKey]: 1 }));
       renderDownloadView();
     } else {
       setDlOps(`上传失败：${(data && data.error) || resp.status}`, 'err');
@@ -3388,7 +3630,8 @@ function initDownloadView() {
         failed.push(company + ':' + (data.message || '中保协未找到'));
       } else if (resp.ok && data.ok) {
         okN++;
-        localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
+        const batchKey = getPdfStatusKey((COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company, dlYear());
+        localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [batchKey]: 1 }));
       } else {
         failN++;
         failed.push(company + ':' + ((data && data.error) || resp.status));
@@ -3486,7 +3729,27 @@ function initDownloadView() {
       // 刷新动态数据（云模式）
       await refreshCloudData();
     } else {
-      setExtOps(`提取失败：${(data && data.error) || '未知错误'}`, 'err');
+      let errHtml = `提取失败：${(data && data.error) || '未知错误'}`;
+      const isNotFound = (data && data.error && data.error.includes('未找到 PDF'));
+      if (isNotFound) {
+        errHtml += `<br><span style="color:#8A6A2E;font-size:11px;">常见原因：① Cloudflare KV 存储有 1-3 分钟全球同步延迟，请稍后刷新；② PDF 未成功保存到云端。可先到「年报下载」页点「刷新状态」确认 PDF 已存在。</span>
+          <button class="btn-reset" id="btnRecheckPdf" style="margin-left:8px;">重新探测 PDF</button>`;
+      }
+      setExtOps(errHtml, 'err');
+      document.getElementById('btnRecheckPdf')?.addEventListener('click', async () => {
+        const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company;
+        setExtOps(`正在探测 ${company} ${year} 的 PDF …`);
+        try {
+          const { resp, data: d } = await apiFetch(`/api/download?company=${encodeURIComponent(fullName)}&year=${encodeURIComponent(year)}`);
+          if (resp.ok && d && d.hasPdf) {
+            setExtOps(`已探测到 PDF：${d.pdfKey}，请重新点击「AI 提取入库」`, 'ok');
+          } else {
+            setExtOps(`未探测到 ${company} ${year} 的 PDF，请先到「年报下载」页下载或上传`, 'err');
+          }
+        } catch (e) {
+          setExtOps('探测失败：' + e.message, 'err');
+        }
+      });
     }
   });
 
@@ -3553,13 +3816,176 @@ async function refreshCloudData() {
   return false;
 }
 
-function renderDownloadView() {
+// ============== 概览 View ==============
+const ovState = { year: '', type: '', std: '', search: '' };
+
+function renderOverviewView() {
   const list = COMPANIES_92.filter(o => {
-    if (dlState.type && o.type !== dlState.type) return false;
-    if (dlState.std && o.standard !== dlState.std) return false;
-    if (dlState.search && !o.full_name.includes(dlState.search)) return false;
+    if (ovState.year && String(o.first_year || '') !== ovState.year && String(o.ry || '') !== ovState.year) return false;
+    if (ovState.type && o.type !== ovState.type) return false;
+    if (ovState.std && o.standard !== ovState.std) return false;
+    if (ovState.search && !o.full_name.includes(ovState.search) && !(SHORT_NAME_MAP[o.full_name] || '').includes(ovState.search)) return false;
     return true;
   });
+
+  // 统计卡片
+  const cnt = v => COMPANIES_92.filter(o => o.standard === v).length;
+  document.getElementById('ovStatCards').innerHTML = `
+    <div class="stat-card"><div class="num">${COMPANIES_92.length}</div><div class="lbl">公司总数</div></div>
+    <div class="stat-card"><div class="num" style="color:#1D6A4F;">${cnt('新准则')}</div><div class="lbl">新准则</div></div>
+    <div class="stat-card"><div class="num" style="color:#9B3A3A;">${cnt('旧准则')}</div><div class="lbl">旧准则</div></div>
+    <div class="stat-card"><div class="num" style="color:#8A6A2E;">${cnt('暂缓披露')}</div><div class="lbl">暂缓披露</div></div>
+    <div class="stat-card"><div class="num" style="color:#777;">${cnt('不适用')}</div><div class="lbl">不适用</div></div>
+    <div class="stat-card"><div class="num" style="color:#2B4C6F;">${COMPANIES_92.filter(o => o.first_year).length}</div><div class="lbl">已发布新准则年报</div></div>
+  `;
+
+  // 填充下拉（首次）
+  const yearSel = document.getElementById('ovYearFilter');
+  if (yearSel.options.length <= 1) {
+    const yrs = [...new Set(COMPANIES_92.map(o => o.first_year || o.ry).filter(Boolean))].sort((a, b) => b - a);
+    yearSel.innerHTML = '<option value="">全部年度</option>' + yrs.map(y => `<option value="${y}">${y}年度</option>`).join('');
+  }
+  const typeSel = document.getElementById('ovTypeFilter');
+  if (typeSel.options.length <= 1) {
+    typeSel.innerHTML = '<option value="">全部类型</option>' + COMPANIES_92_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
+  const stdSel = document.getElementById('ovStdFilter');
+  if (stdSel.options.length <= 1) {
+    stdSel.innerHTML = '<option value="">全部</option>' + ['新准则','旧准则','暂缓披露','不适用'].map(s => `<option value="${s}">${s}</option>`).join('');
+  }
+
+  document.getElementById('ovCount').textContent = `共 ${list.length} / ${COMPANIES_92.length} 家`;
+
+  // 类型分布饼图
+  const typeColors = {
+    '头部险企': '#2B4C6F', '外资公司': '#7F77DD', '银行系公司': '#1D6A4F',
+    '养老公司': '#C1954C', '健康险公司': '#B84A4A', '中小公司': '#888'
+  };
+  const typeData = COMPANIES_92_TYPES.map(t => ({
+    name: t,
+    value: list.filter(o => o.type === t).length,
+    color: typeColors[t] || '#999'
+  })).filter(d => d.value > 0);
+  renderOverviewPie(typeData);
+
+  // 新准则执行进度（历年新增，不受年度筛选影响）
+  const ymap = {};
+  COMPANIES_92.forEach(o => { if (o.first_year) ymap[o.first_year] = (ymap[o.first_year] || 0) + 1; });
+  const years = Object.keys(ymap).sort();
+  renderOverviewBar(years.map(y => ({ name: y + '年', value: ymap[y] })));
+
+  // 公司清单表格（序号按筛选结果连续 1-N 排列）
+  const rows = list.map((o, i) => {
+    const stdCls = STD_CLASS[o.standard] || '';
+    return `<tr>
+      <td style="text-align:center;color:var(--c-text-muted);">${i + 1}</td>
+      <td>${o.full_name}</td>
+      <td style="text-align:center;white-space:nowrap;">${o.type}</td>
+      <td style="text-align:center;"><span class="std-tag ${stdCls}">${o.standard}</span></td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;">${o.first_year || '—'}</td>
+      <td class="cell-link">${o.url ? `<a href="${o.url}" target="_blank" rel="noopener">${o.url.replace(/^https?:\/\//, '')}</a>` : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ovTableContainer').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table db-table" style="min-width:760px;">
+        <thead><tr>
+          <th style="width:50px;">序号</th><th>公司名称</th><th>公司类型</th><th>准则适用</th><th>首次发布新准则财报年份</th><th>官网地址</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderOverviewPie(items) {
+  const el = document.getElementById('ovTypeChart');
+  if (!el) return;
+  let inst = echarts.getInstanceByDom(el);
+  if (!inst) inst = echarts.init(el);
+  if (!items.length) { inst.clear(); document.getElementById('ovTypeLegend').innerHTML = ''; return; }
+  inst.setOption({
+    color: items.map(i => i.color),
+    tooltip: { trigger: 'item', formatter: '{b}: {c}家 ({d}%)' },
+    series: [{
+      type: 'pie', radius: ['45%', '75%'], center: ['50%', '50%'],
+      data: items.map(i => ({ name: i.name, value: i.value })),
+      label: { show: false },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.2)' } }
+    }]
+  }, true);
+  document.getElementById('ovTypeLegend').innerHTML = items.map(i =>
+    `<div style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:${i.color};"></span>
+      <span>${i.name}</span><span style="margin-left:auto;font-family:'JetBrains Mono',monospace;">${i.value}家</span>
+     </div>`).join('');
+  if (!el._resizeBound) { window.addEventListener('resize', () => inst.resize()); el._resizeBound = true; }
+}
+
+function renderOverviewBar(data) {
+  const el = document.getElementById('ovYearChart');
+  if (!el) return;
+  let inst = echarts.getInstanceByDom(el);
+  if (!inst) inst = echarts.init(el);
+  if (!data.length) { inst.clear(); return; }
+  inst.setOption({
+    tooltip: { trigger: 'axis', formatter: '{b}: {c}家' },
+    grid: { left: 50, right: 30, top: 20, bottom: 30 },
+    xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', name: '家', axisLabel: { fontSize: 11 } },
+    series: [{ data: data.map(d => d.value), type: 'bar', itemStyle: { color: '#2B4C6F', borderRadius: [3, 3, 0, 0] }, label: { show: true, position: 'top', fontSize: 11 } }]
+  }, true);
+  if (!el._resizeBound) { window.addEventListener('resize', () => inst.resize()); el._resizeBound = true; }
+}
+
+function initOverviewView() {
+  ['ovYearFilter','ovTypeFilter','ovStdFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      ovState.year = document.getElementById('ovYearFilter').value;
+      ovState.type = document.getElementById('ovTypeFilter').value;
+      ovState.std = document.getElementById('ovStdFilter').value;
+      renderOverviewView();
+    });
+  });
+  document.getElementById('ovSearch').addEventListener('input', e => {
+    ovState.search = e.target.value.trim();
+    renderOverviewView();
+  });
+  document.getElementById('ovReset').addEventListener('click', () => {
+    document.getElementById('ovYearFilter').value = '';
+    document.getElementById('ovTypeFilter').value = '';
+    document.getElementById('ovStdFilter').value = '';
+    document.getElementById('ovSearch').value = '';
+    ovState.year = ''; ovState.type = ''; ovState.std = ''; ovState.search = '';
+    renderOverviewView();
+  });
+}
+
+function getPdfStatusKey(company, year) {
+  return `${company}_${year}`;
+}
+
+// base64 PDF → 浏览器下载保存到本地
+function savePdfLocal(base64, filename) {
+  try {
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'report.pdf';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    return true;
+  } catch (e) {
+    console.error('savePdfLocal error', e);
+    return false;
+  }
+}
+
+function renderDownloadView() {
   // 统计卡片
   const cnt = v => COMPANIES_92.filter(o => o.standard === v).length;
   document.getElementById('dlStatCards').innerHTML = `
@@ -3570,33 +3996,59 @@ function renderDownloadView() {
     <div class="stat-card"><div class="num" style="color:#777;">${cnt('不适用')}</div><div class="lbl">不适用</div></div>
     <div class="stat-card"><div class="num" style="color:#2B4C6F;">${COMPANIES_92.filter(o => o.first_year).length}</div><div class="lbl">已发布新准则年报</div></div>
   `;
-  document.getElementById('dlCount').textContent = `共 ${list.length} / ${COMPANIES_92.length} 家`;
-  if (list.length === 0) {
-    document.getElementById('dlTableContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--c-text-muted);">没有匹配的公司</div>';
+  // 渲染已下载 PDF 记录（异步探测）
+  renderPdfRecords();
+}
+
+// 已下载 PDF 记录：云模式真实探测 / 静态模式读 localStorage
+async function renderPdfRecords() {
+  const container = document.getElementById('dlPdfRecordsContainer');
+  if (!container) return;
+  const year = document.getElementById('dlTargetYear').value || '2025年度';
+  const localStore = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
+  const localRecords = Object.keys(localStore)
+    .filter(k => k.endsWith('_' + year) && localStore[k])
+    .map(k => {
+      const company = k.slice(0, -year.length - 1);
+      return { company, short: company, year, source: 'local', size: null };
+    });
+
+  if (!isCloudMode) {
+    container.innerHTML = buildPdfRecordsTable(localRecords, false);
     return;
   }
-  const store = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
-  const rows = list.map(o => {
-    const stdCls = STD_CLASS[o.standard] || '';
-    const firstYear = o.first_year || '—';
-    const pdfDone = !!store[o.full_name];
-    return `<tr>
-      <td style="text-align:center;color:var(--c-text-muted);">${o.seq}</td>
-      <td class="cell-link">${o.full_name}</td>
-      <td class="cell-link">${o.url ? `<a class="dl-link" href="${o.url}" target="_blank" rel="noopener">${o.url.replace(/^https?:\/\//, '')}</a>` : '—'}</td>
-      <td style="text-align:center;white-space:nowrap;">${o.type}</td>
-      <td style="text-align:center;"><span class="std-tag ${stdCls}">${o.standard}</span></td>
-      <td style="text-align:center;font-family:'JetBrains Mono',monospace;">${firstYear}</td>
-      <td style="text-align:center;"><button class="pdf-btn ${pdfDone ? 'done' : ''}" data-name="${o.full_name}">${pdfDone ? '✓ 已下载' : '未下载'}</button></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('dlTableContainer').innerHTML = `
+
+  container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--c-text-muted);">正在探测云端已下载 PDF…</div>';
+  const records = [];
+  for (const c of COMPANIES_92) {
+    try {
+      const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
+      const { resp, data } = await apiFetch(`/api/download?company=${encodeURIComponent(short)}&year=${encodeURIComponent(year)}`);
+      if (resp.ok && data && data.hasPdf) {
+        records.push({ company: c.full_name, short, year, source: data.source || 'cloud', size: data.bytes || null });
+      }
+    } catch (e) {}
+  }
+  container.innerHTML = buildPdfRecordsTable(records, true);
+}
+
+function buildPdfRecordsTable(records, isCloud) {
+  if (!records.length) {
+    return `<div style="padding:24px;text-align:center;color:var(--c-text-muted);">暂无 ${isCloud ? '云端' : '本地'}已下载 PDF 记录</div>`;
+  }
+  const rows = records.map(r => `
+    <tr>
+      <td style="text-align:left;">${r.company}</td>
+      <td style="text-align:center;white-space:nowrap;">${r.year}</td>
+      <td style="text-align:center;">${r.size ? (r.size / 1024).toFixed(0) + ' KB' : '—'}</td>
+      <td style="text-align:center;"><span class="std-tag std-new">${r.source === 'local' ? '本地记录' : '云端存储'}</span></td>
+      ${isCloud ? `<td style="text-align:center;"><a class="dl-link" href="/api/download?company=${encodeURIComponent(r.short || r.company)}&year=${encodeURIComponent(r.year)}&dl=1" target="_blank" rel="noopener">下载</a></td>` : ''}
+    </tr>
+  `).join('');
+  return `
     <div class="data-table-wrap">
-      <table class="data-table db-table" style="min-width:820px;">
-        <thead><tr>
-          <th style="width:50px;">序号</th><th>公司名称</th><th>官网地址</th><th>公司类型</th>
-          <th>准则适用</th><th>首次发布新准则财报年份</th><th>PDF</th>
-        </tr></thead>
+      <table class="data-table db-table" style="min-width:${isCloud ? '560' : '480'}px;">
+        <thead><tr><th>公司名称</th><th>年度</th><th>大小</th><th>来源</th>${isCloud ? '<th>操作</th>' : ''}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -3814,6 +4266,278 @@ function renderExtractView() {
   `;
 }
 
+// ============== 折现率 View（复刻 v2.0） ==============
+// 依赖：中债登收益曲线后端服务（默认 http://127.0.0.1:8790）
+let dcState = { records: [], current: null, last: null };
+
+function dcDefaultDate() {
+  const d = new Date();
+  // 默认取最近一个工作日（周一~周五；周一取上周五）
+  let dt = new Date(d);
+  while (dt.getDay() === 0 || dt.getDay() === 6) dt.setDate(dt.getDate() - 1);
+  return dt.toISOString().slice(0, 10);
+}
+
+function initDiscountView() {
+  document.getElementById('dcDate').value = dcDefaultDate();
+  document.getElementById('dcRunBtn').addEventListener('click', dcRun);
+  document.getElementById('dcDownloadBtn').addEventListener('click', dcDownloadExcel);
+  document.getElementById('dcSel').addEventListener('change', e => {
+    const rec = dcState.records.find(r => r.ts === e.target.value);
+    if (rec) dcDisplay(rec);
+  });
+  // 自动尝试加载历史记录
+  dcLoadRecords();
+}
+
+async function dcLoadRecords() {
+  const url = (document.getElementById('dcUrl').value || 'http://127.0.0.1:8790').replace(/\/$/, '');
+  dcState.baseUrl = url;
+  const status = document.getElementById('dcStatus');
+  status.textContent = '连接折现率服务…';
+  try {
+    const resp = await fetch(url + '/records', { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    dcState.records = Array.isArray(data) ? data : [];
+    const sel = document.getElementById('dcSel');
+    sel.innerHTML = '<option value="">选择历史记录…</option>' + dcState.records.map(r =>
+      `<option value="${r.ts}">${r.ts}${r.csz ? ' · ' + r.csz + '日平均' : ''}${r.note ? ' · ' + r.note : ''}</option>`).join('');
+    status.textContent = dcState.records.length ? `已连接，历史记录 ${dcState.records.length} 条` : '已连接，暂无历史记录';
+  } catch (e) {
+    status.textContent = '无法连接折现率服务（' + e.message + '）。请先启动后端服务。';
+  }
+}
+
+async function dcRun() {
+  const status = document.getElementById('dcStatus');
+  const date = document.getElementById('dcDate').value;
+  const csz = document.getElementById('dcCsz').value;
+  const s20 = parseFloat(document.getElementById('dcS20').value) || 0.25;
+  const s40 = parseFloat(document.getElementById('dcS40').value) || 0.15;
+  const ufr = parseFloat(document.getElementById('dcUfr').value) || 4.5;
+  if (!date) { status.textContent = '请选择日期'; return; }
+  status.textContent = '计算中（下载中债登数据 → 计算曲线 → 对比上一期）…';
+  try {
+    const resp = await fetch(dcState.baseUrl + '/calc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, csz: parseInt(csz), s20, s40, ufr }),
+      signal: AbortSignal.timeout(120000)
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'HTTP ' + resp.status);
+    dcState.current = data;
+    dcDisplay(data);
+    status.textContent = '计算完成：' + (data.note || data.date);
+    dcLoadRecords();
+  } catch (e) {
+    status.textContent = '计算失败：' + e.message;
+  }
+}
+
+function dcDisplay(rec) {
+  dcState.current = rec;
+  // 统计卡片
+  document.getElementById('dcCards').innerHTML = [
+    ['数据日期', rec.date || '—'],
+    ['曲线方式', rec.csz === 750 ? '750日移动平均' : '当日线'],
+    ['前20年溢价', (rec.s20 != null ? rec.s20 + '%' : '—')],
+    ['40年后溢价', (rec.s40 != null ? rec.s40 + '%' : '—')],
+    ['UFR', (rec.ufr != null ? rec.ufr + '%' : '—')],
+    ['平均差异(bp)', rec.avgDiff != null ? rec.avgDiff.toFixed(1) : '—']
+  ].map(([l, v]) => `<div class="stat-card"><div class="num" style="font-size:16px;">${v}</div><div class="lbl">${l}</div></div>`).join('');
+
+  // 曲线对比图：当月 vs 上一期（如有）
+  const el = document.getElementById('dcChart');
+  let inst = echarts.getInstanceByDom(el);
+  if (!inst) inst = echarts.init(el);
+  const yrs = rec.years || [];
+  const series = [];
+  if (rec.curve && rec.curve.length) {
+    series.push({ name: rec.date + (rec.csz === 750 ? ' 750日均' : ' 当日'), type: 'line', data: rec.curve, smooth: true, symbol: 'none' });
+  }
+  if (rec.lastCurve && rec.lastCurve.length) {
+    series.push({ name: (rec.lastDate || '上一期') + ' 基准', type: 'line', data: rec.lastCurve, smooth: true, symbol: 'none', lineStyle: { type: 'dashed' } });
+  }
+  if (rec.ufrCurve && rec.ufrCurve.length) {
+    series.push({ name: 'UFR ' + rec.ufr + '%', type: 'line', data: rec.ufrCurve, smooth: true, symbol: 'none', lineStyle: { type: 'dotted', width: 1 } });
+  }
+  inst.setOption({
+    tooltip: { trigger: 'axis', valueFormatter: v => v != null ? v.toFixed(4) + '%' : '—' },
+    legend: { top: 4, textStyle: { fontSize: 11 } },
+    grid: { left: 55, right: 20, top: 40, bottom: 30 },
+    xAxis: { type: 'category', data: yrs, axisLabel: { fontSize: 10, rotate: 0 } },
+    yAxis: { type: 'value', name: '%', axisLabel: { fontSize: 10 } },
+    series
+  }, true);
+  if (!el._resizeBound) { window.addEventListener('resize', () => inst.resize()); el._resizeBound = true; }
+
+  // 前20年差异明细
+  const diffSub = document.getElementById('dcDiffSub');
+  const diffRows = (rec.diff || []).map(d =>
+    `<tr>
+      <td style="text-align:center;">${d.y}</td>
+      <td style="text-align:right;">${d.v1 != null ? d.v1.toFixed(4) + '%' : '—'}</td>
+      <td style="text-align:right;">${d.v0 != null ? d.v0.toFixed(4) + '%' : '—'}</td>
+      <td style="text-align:right;" class="${d.diff != null && d.diff > 0 ? 'pos' : (d.diff != null && d.diff < 0 ? 'neg' : '')}">${d.diff != null ? (d.diff > 0 ? '+' : '') + (d.diff * 100).toFixed(1) + ' bp' : '—'}</td>
+    </tr>`).join('');
+  diffSub.textContent = rec.diff ? `当月 ${rec.date} vs ${rec.lastDate || '上一期'} 基准，前20年每个期限的差异（基点，1%=100bp）：` : '无历史对比数据';
+  document.getElementById('dcDiffTable').innerHTML = diffRows ? `
+    <div class="data-table-wrap">
+      <table class="data-table db-table" style="min-width:420px;">
+        <thead><tr><th>期限</th><th>当月</th><th>基准日</th><th>差异</th></tr></thead>
+        <tbody>${diffRows}</tbody>
+      </table>
+    </div>` : '<div style="padding:16px;color:var(--c-text-muted);">无差异数据</div>';
+
+  // 完整明细 0~50年
+  const detailRows = (rec.curve || []).map((v, i) =>
+    `<tr><td style="text-align:center;">${rec.years[i]}</td><td style="text-align:right;">${v != null ? v.toFixed(4) + '%' : '—'}</td></tr>`).join('');
+  document.getElementById('dcDetailTable').innerHTML = `
+    <div class="data-table-wrap" style="max-height:420px;">
+      <table class="data-table db-table" style="min-width:200px;">
+        <thead><tr><th>期限(年)</th><th>收益率+溢价(%)</th></tr></thead>
+        <tbody>${detailRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function dcDownloadExcel() {
+  const rec = dcState.current;
+  if (!rec) { alert('请先运行计算'); return; }
+  const rows = [['期限(年)', '收益率+溢价(%)']];
+  (rec.curve || []).forEach((v, i) => rows.push([rec.years[i], v != null ? +v.toFixed(6) : null]));
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.download = `折现率_${rec.date || 'curve'}.csv`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ============== 问问 Agent View（离线问答，基于 RAW_DATA） ==============
+const ASK_ALIAS = {
+  '保险服务收入': 'B01', '保费收入': 'B01', '净利润': 'B17', '利润总额': 'B15', '所得税费用': 'B16', '所得税': 'B16',
+  '总资产': 'A07', '净资产': 'A06', 'CSM余额': 'D10', '合同服务边际': 'D10', '期末CSM': 'D10',
+  '新业务CSM': 'D08', '新业务合同服务边际': 'D08', '期初CSM': 'D05', 'CSM计息': 'D06', 'CSM摊销': 'D07',
+  '保险服务费用': 'B12', '保险服务业绩': 'B01+B12', '承保财务损益': 'B10', '承保财务净损益': 'B10',
+  '保险合同负债': 'A05', '期末LC': 'C05', '期初LC': 'C01', 'LC余额': 'C05', '亏损合同负债': 'C01',
+  '折现率': 'I01', '置信水平': 'J01', '获取费用率': 'G01'
+};
+const ASK_PERIOD = { '本期': '本期', '期末': '本期末', '年度': '本期', '期初': '本期初', '上期': '上期', '上期末': '上期末' };
+
+function askInit() {
+  document.getElementById('askInput').addEventListener('keydown', e => { if (e.key === 'Enter') askSend(); });
+}
+function askQuick(q) {
+  document.getElementById('askInput').value = q;
+  askSend();
+}
+function askAddMsg(role, text) {
+  const chat = document.getElementById('askChat');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;justify-content:' + (role === 'user' ? 'flex-end' : 'flex-start') + ';';
+  div.innerHTML = `<div style="max-width:82%;padding:9px 13px;border-radius:10px;font-size:13px;line-height:1.7;white-space:pre-wrap;${role === 'user' ? 'background:var(--c-navy);color:#fff;' : 'background:var(--c-surface);border:1px solid var(--c-border);color:var(--c-text-primary);'}">${text}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+function askGetVal(company, year, code) {
+  const rows = RAW_DATA.filter(r => r['公司名称'] === company && r['报告期'] === year && r['指标编号'] === code);
+  if (!rows.length) return null;
+  // 按最新优先的期间顺序匹配（资产负债表指标多为 本期末/本期初，利润表指标为 本期/上期）
+  const order = ['本期末', '本期', '期末', '本期初', '期初', '上期', '上期末', '年度'];
+  for (const p of order) {
+    const r = rows.find(x => x['期间'] === p);
+    if (r) return { v: r['数值-换算'], period: p };
+  }
+  const r = rows[0];
+  return { v: r['数值-换算'], period: r['期间'] };
+}
+// 支持简单公式（如 B01+B12 保险服务业绩）与单指标
+function askEval(company, year, expr) {
+  const tr = String(expr).trim();
+  if (/^[A-Z]\d+$/.test(tr)) return askGetVal(company, year, tr);
+  const m = tr.match(/^([A-Z]\d+)\s*\+\s*([A-Z]\d+)$/);
+  if (m) {
+    const a = askGetVal(company, year, m[1]);
+    const b = askGetVal(company, year, m[2]);
+    if (a && b && typeof a.v === 'number' && typeof b.v === 'number') return { v: a.v + b.v, period: a.period };
+    return null;
+  }
+  return null;
+}
+// 公司名匹配：简称 → DB_ALIAS（中国平安→平安人寿） → 全称去后缀模糊
+function askPickCompany(q) {
+  const companies = COMPANIES.filter(c => c.has_data);
+  const shorts = companies.map(c => c.short_name);
+  const hit = shorts.filter(n => q.includes(n));
+  if (hit.length) return hit;
+  const ah = Object.entries(DB_ALIAS).filter(([k]) => q.includes(k)).map(([, v]) => v);
+  if (ah.length) return ah;
+  const fulls = companies.filter(c => c.full_name && q.includes(String(c.full_name).replace(/保险股份有限公司|保险有限责任公司|保险有限公司|股份有限公司|有限责任公司|有限公司/g, '')));
+  if (fulls.length) return fulls.map(c => c.short_name);
+  return [];
+}
+function askFmt(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'string') return v;
+  return (+v).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' 亿元';
+}
+function askAnswer(q) {
+  const year = (q.match(/20\d{2}/) || [])[0];
+  const yearStr = year ? year + '年度' : (REPORT_PERIODS[REPORT_PERIODS.length - 1] || '2025年度');
+  const companies = COMPANIES.filter(c => c.has_data);
+  const cnames = companies.map(c => c.short_name);
+  const codeOf = (qq) => Object.entries(ASK_ALIAS).find(([k]) => qq.includes(k));
+
+  // 1) 排名类：X年净利润排名前N的公司 / 排名
+  if (/排名|前\s*(\d+)|top\s*(\d+)/i.test(q)) {
+    const mN = q.match(/前\s*(\d+)|top\s*(\d+)/i);
+    const topN = parseInt((mN && (mN[1] || mN[2])) || 5);
+    const cm = codeOf(q);
+    if (!cm) return '未识别要排名的指标。可尝试「2025年净利润排名前五的公司」。';
+    const list = cnames.map(c => {
+      const r = askEval(c, yearStr, cm[1]);
+      return r && typeof r.v === 'number' ? { c, v: r.v, p: r.period } : null;
+    }).filter(Boolean).sort((a, b) => b.v - a.v).slice(0, topN);
+    if (!list.length) return `「${cm[0]}」在 ${yearStr} 无可用数据`;
+    return `${yearStr}「${cm[0]}」排名前 ${list.length}：\n` + list.map((x, i) => `${i + 1}. ${x.c}：${askFmt(x.v)}（${x.p}）`).join('\n');
+  }
+
+  // 2) 对比类：A和B对比（无指标时默认净利润）
+  const picked = askPickCompany(q);
+  if ((/和|与|vs|对比|比较/.test(q)) && picked.length >= 2) {
+    const cm = codeOf(q) || ['净利润', 'B17'];
+    const lines = picked.slice(0, 3).map(c => {
+      const r = askEval(c, yearStr, cm[1]);
+      return `· ${c}：${r ? askFmt(r.v) + '（' + r.period + '）' : '无数据'}`;
+    });
+    return `${yearStr}「${cm[0]}」对比：\n` + lines.join('\n');
+  }
+
+  // 3) 单公司数值类
+  if (picked.length === 1) {
+    const cm = codeOf(q);
+    if (!cm) return `未识别指标。可尝试「${picked[0]}2025年的净利润是多少？」（支持：净利润、总资产、净资产、CSM余额、保险服务收入等）`;
+    const r = askEval(picked[0], yearStr, cm[1]);
+    return `${picked[0]} ${yearStr}「${cm[0]}」：${r ? askFmt(r.v) + '（' + r.period + '）' : '无数据'}`;
+  }
+
+  // 4) 汇总兜底
+  return '我没完全理解。试试这些问法：\n· 中国人寿2025年的净利润是多少？\n· 2025年净利润排名前五的公司\n· 平安人寿和太平洋人寿2025年对比\n· 泰康人寿2025年的CSM余额是多少？';
+}
+function askSend() {
+  const input = document.getElementById('askInput');
+  const q = input.value.trim();
+  if (!q) return;
+  askAddMsg('user', q);
+  input.value = '';
+  const ans = askAnswer(q);
+  askAddMsg('bot', ans);
+}
+
 // ============== Update ==============
 function updateAll() {
   refreshThemeColors();
@@ -4020,6 +4744,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initDownloadView();
   initExtractView();
   initDbMgmt();
+  initOverviewView();
+  initDiscountView();
+  askInit();
   // 云模式探测（Cloudflare 部署时启用动态数据与执行按钮；GitHub Pages 静态模式自动降级）
   initCloudMode();
 
@@ -4076,10 +4803,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportButtons();
   updateAll();
   applyFilters();
+  switchView('overview'); // 默认进入概览页
 
   // 页面完全加载（字体/布局就绪）后重算图表尺寸，避免瀑布图等初始渲染异常
   window.addEventListener('load', () => {
     if (currentView === 'database') renderDatabase();
+    else if (currentView === 'overview') renderOverviewView();
     else if (hasApplied) renderCharts();
   });
 });

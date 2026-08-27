@@ -5,8 +5,19 @@
 // POST {companies:[...], year}            — 批量下载（并发3）：静态地址优先，其余走中保协，每家公司独立结果【需管理密码】
 // POST multipart（file 字段）             — 直接上传 PDF 文件存存储【需管理密码】
 import { route, ok, fail, checkAuth } from '../_lib/auth.js';
-import { exists, readJSON, storePut } from '../_lib/db.js';
+import { exists, readJSON, storePut, storeGetBytes } from '../_lib/db.js';
 import { createIachinaClient, fetchAnnualPdf } from '../_lib/iachina.js';
+
+// ArrayBuffer → base64（分块避免栈溢出；Workers 的 btoa 可用）
+function bufToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
 
 // 公司名归一化：全称/别名 → sources.json 的 key（简称）。
 // 前端选择器已保证传简称，此函数兜底手输全称的情况。
@@ -35,12 +46,13 @@ export function normalizeCompany(company, sources) {
 
 // 中保协自动抓取：搜索 + 详情 + 下载 → 存 KV
 // 返回 { ok:true, ... } 或 { ok:false, error, notFound? }
-async function fetchFromIachina(env, { company, fullName, year }, client) {
+// withBase64=true 时附加 base64（供前端一键保存到本地）
+async function fetchFromIachina(env, { company, fullName, year }, client, withBase64) {
   const r = await fetchAnnualPdf({ company, fullName, year }, client ? { client } : {});
   if (!r.ok) return r;
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
   await storePut(env.STORE, key, r.buf, 'application/pdf');
-  return {
+  const res = {
     ok: true,
     company,
     year,
@@ -51,19 +63,21 @@ async function fetchFromIachina(env, { company, fullName, year }, client) {
     title: r.title,
     date: r.date,
   };
+  if (withBase64) res.base64 = bufToBase64(r.buf);
+  return res;
 }
 
 // 单公司下载入口：静态 URL → sources.json → 中保协
-async function downloadOne(env, { company, fullName, year, url }, sources) {
+async function downloadOne(env, { company, fullName, year, url }, sources, withBase64) {
   const urlToFetch = (url || '').trim();
-  if (urlToFetch) return doFetch(env, company, year, urlToFetch);
+  if (urlToFetch) return doFetch(env, company, year, urlToFetch, withBase64);
 
   const src = sources[company];
   const mappedUrl = (src && src[year]) || (src && src.url) || '';
-  if (mappedUrl) return doFetch(env, company, year, mappedUrl);
+  if (mappedUrl) return doFetch(env, company, year, mappedUrl, withBase64);
 
   // 无静态地址 → 中保协自动抓取（覆盖全部险企 + 任意年度）
-  const r = await fetchFromIachina(env, { company, fullName, year });
+  const r = await fetchFromIachina(env, { company, fullName, year }, null, withBase64);
   if (r.ok) return ok(r);
   return ok({
     company,
@@ -84,6 +98,19 @@ export async function onRequest({ request, env }) {
         const company = url.searchParams.get('company') || '';
         const year = url.searchParams.get('year') || '2025年度';
         const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
+        // dl=1：直接返回 PDF 二进制（浏览器触发下载保存到本地）
+        if (url.searchParams.get('dl') === '1') {
+          const buf = await storeGetBytes(env.STORE, key);
+          if (!buf) return ok({ company, year, pdfKey: key, hasPdf: false });
+          const filename = `${company}_${year}.pdf`;
+          return new Response(new Uint8Array(buf), {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
         const has = await exists(env, key);
         return ok({ company, year, pdfKey: key, hasPdf: has });
       }
@@ -197,12 +224,12 @@ export async function onRequest({ request, env }) {
         return ok({ debug: true, diag });
       }
 
-      return downloadOne(env, { company, fullName, year, url: body.url }, sources);
+      return downloadOne(env, { company, fullName, year, url: body.url }, sources, !!body.localSave);
     }
   });
 }
 
-async function doFetch(env, company, year, url) {
+async function doFetch(env, company, year, url, withBase64) {
   let resp;
   try {
     resp = await fetch(url, {
@@ -221,5 +248,7 @@ async function doFetch(env, company, year, url) {
   }
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
   await storePut(env.STORE, key, buf, 'application/pdf');
-  return ok({ company, year, pdfKey: key, bytes: buf.byteLength, action: 'downloaded' });
+  const res = { company, year, pdfKey: key, bytes: buf.byteLength, action: 'downloaded' };
+  if (withBase64) res.base64 = bufToBase64(buf);
+  return ok(res);
 }
