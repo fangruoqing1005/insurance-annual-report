@@ -5,7 +5,7 @@
 // POST {companies:[...], year}            — 批量下载（并发3）：静态地址优先，其余走中保协，每家公司独立结果【需管理密码】
 // POST multipart（file 字段）             — 直接上传 PDF 文件存存储【需管理密码】
 import { route, ok, fail, checkAuth } from '../_lib/auth.js';
-import { exists, readJSON, storePut, storeGetBytes } from '../_lib/db.js';
+import { exists, readJSON, storePut, storeGetBytes, storeList } from '../_lib/db.js';
 import { createIachinaClient, fetchAnnualPdf } from '../_lib/iachina.js';
 
 // ArrayBuffer → base64（分块避免栈溢出；Workers 的 btoa 可用）
@@ -51,7 +51,10 @@ async function fetchFromIachina(env, { company, fullName, year }, client, withBa
   const r = await fetchAnnualPdf({ company, fullName, year }, client ? { client } : {});
   if (!r.ok) return r;
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
-  await storePut(env.STORE, key, r.buf, 'application/pdf');
+  const saved = await storePut(env.STORE, key, r.buf, 'application/pdf');
+  if (!saved) {
+    return { ok: false, needUpload: true, error: 'PDF 抓取成功但存储写入失败（检查 Cloudflare 存储绑定是否配置：Settings → Functions → KV/R2 bindings → STORE）' };
+  }
   const res = {
     ok: true,
     company,
@@ -98,6 +101,21 @@ export async function onRequest({ request, env }) {
         const company = url.searchParams.get('company') || '';
         const year = url.searchParams.get('year') || '2025年度';
         const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
+        // list=1：一次性列出存储中全部 PDF（prefix 匹配），前端避免逐家探测
+        if (url.searchParams.get('list') === '1') {
+          const prefix = env.PDF_PREFIX || 'pdfs/';
+          const keys = await storeList(env.STORE, prefix);
+          const files = keys
+            .filter(k => k.endsWith('.pdf'))
+            .map(k => {
+              const name = k.slice(prefix.length, -'.pdf'.length);
+              const idx = name.lastIndexOf('_');
+              if (idx <= 0) return null;
+              return { company: name.slice(0, idx), year: name.slice(idx + 1) };
+            })
+            .filter(Boolean);
+          return ok({ list: files, count: files.length });
+        }
         // dl=1：直接返回 PDF 二进制（浏览器触发下载保存到本地）
         if (url.searchParams.get('dl') === '1') {
           const buf = await storeGetBytes(env.STORE, key);
@@ -131,7 +149,8 @@ export async function onRequest({ request, env }) {
         const year = String(form.get('year') || '2025年度').trim();
         if (!company) return fail('缺少 company 参数');
         const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
-        await storePut(env.STORE, key, file.stream(), file.type || 'application/pdf');
+        const saved = await storePut(env.STORE, key, file.stream(), file.type || 'application/pdf');
+        if (!saved) return fail('上传失败：存储写入失败（检查 Cloudflare 存储绑定是否配置）');
         return ok({ company, year, pdfKey: key, action: 'uploaded' });
       }
 
@@ -247,7 +266,8 @@ async function doFetch(env, company, year, url, withBase64) {
     return fail('下载内容不是有效 PDF（%PDF 头缺失，可能被反爬或地址错误）');
   }
   const key = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
-  await storePut(env.STORE, key, buf, 'application/pdf');
+  const saved = await storePut(env.STORE, key, buf, 'application/pdf');
+  if (!saved) return fail('下载成功但存储写入失败（检查 Cloudflare 存储绑定是否配置：Settings → Functions → KV/R2 bindings → STORE）');
   const res = { company, year, pdfKey: key, bytes: buf.byteLength, action: 'downloaded' };
   if (withBase64) res.base64 = bufToBase64(buf);
   return ok(res);

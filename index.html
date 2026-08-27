@@ -1506,15 +1506,11 @@ body {
       </div>
     </div>
 
-    <!-- 年报下载 View：92家公司分类总览 + PDF下载状态 -->
+    <!-- 年报下载 View：PDF 下载管理 -->
     <div class="page-view" id="downloadView" style="display:none;">
       <div class="page-header">
         <h2>年报下载</h2>
-        <span class="page-sub">PDF 年报下载管理 · 已下载记录</span>
       </div>
-
-      <!-- 统计卡片 -->
-      <div class="stat-cards" id="dlStatCards"></div>
 
       <!-- 云模式操作区 -->
       <div class="dl-ops cloud-only" id="dlOps" style="display:none;">
@@ -3469,9 +3465,9 @@ function renderDatabase() {
 const STD_CLASS = {'新准则': 'std-new', '旧准则': 'std-old', '暂缓披露': 'std-delay', '不适用': 'std-na'};
 
 function initDownloadView() {
-  // 刷新已下载 PDF 记录
+  // 刷新已下载 PDF 记录（强制重新探测）
   document.getElementById('btnRefreshPdfStatus').addEventListener('click', () => {
-    renderPdfRecords();
+    renderPdfRecords(true);
   });
 
   // ===== 云模式操作区（年报下载页 + 智能提取页）=====
@@ -3573,6 +3569,8 @@ function initDownloadView() {
       const key = getPdfStatusKey((COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company, dlYear());
       localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [key]: 1 }));
       renderDownloadView();
+      // KV 可能有 1-3 分钟同步延迟：延迟 5 秒强制刷新一次已下载记录
+      setTimeout(() => { if (document.getElementById('dlPdfRecordsContainer')) renderPdfRecords(true); }, 5000);
     } else {
       setDlOps(`下载失败：${(data && data.error) || '未知错误'}`, 'err');
     }
@@ -3986,22 +3984,13 @@ function savePdfLocal(base64, filename) {
 }
 
 function renderDownloadView() {
-  // 统计卡片
-  const cnt = v => COMPANIES_92.filter(o => o.standard === v).length;
-  document.getElementById('dlStatCards').innerHTML = `
-    <div class="stat-card"><div class="num">${COMPANIES_92.length}</div><div class="lbl">公司总数</div></div>
-    <div class="stat-card"><div class="num" style="color:#1D6A4F;">${cnt('新准则')}</div><div class="lbl">新准则</div></div>
-    <div class="stat-card"><div class="num" style="color:#9B3A3A;">${cnt('旧准则')}</div><div class="lbl">旧准则</div></div>
-    <div class="stat-card"><div class="num" style="color:#8A6A2E;">${cnt('暂缓披露')}</div><div class="lbl">暂缓披露</div></div>
-    <div class="stat-card"><div class="num" style="color:#777;">${cnt('不适用')}</div><div class="lbl">不适用</div></div>
-    <div class="stat-card"><div class="num" style="color:#2B4C6F;">${COMPANIES_92.filter(o => o.first_year).length}</div><div class="lbl">已发布新准则年报</div></div>
-  `;
   // 渲染已下载 PDF 记录（异步探测）
   renderPdfRecords();
 }
 
-// 已下载 PDF 记录：云模式真实探测 / 静态模式读 localStorage
-async function renderPdfRecords() {
+// 已下载 PDF 记录：云模式走 list=1 一次性探测（快且准）；静态模式读 localStorage
+// 探测结果缓存 60s，避免每次进页面都重复请求；「刷新状态」按钮强制重新探测
+async function renderPdfRecords(force = false) {
   const container = document.getElementById('dlPdfRecordsContainer');
   if (!container) return;
   const year = document.getElementById('dlTargetYear').value || '2025年度';
@@ -4018,18 +4007,39 @@ async function renderPdfRecords() {
     return;
   }
 
-  container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--c-text-muted);">正在探测云端已下载 PDF…</div>';
-  const records = [];
-  for (const c of COMPANIES_92) {
+  // 命中缓存（60s 内且未强制刷新）直接渲染
+  const cacheKey = 'dl_pdf_probe_' + year;
+  if (!force) {
     try {
-      const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
-      const { resp, data } = await apiFetch(`/api/download?company=${encodeURIComponent(short)}&year=${encodeURIComponent(year)}`);
-      if (resp.ok && data && data.hasPdf) {
-        records.push({ company: c.full_name, short, year, source: data.source || 'cloud', size: data.bytes || null });
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Date.now() - cached.ts < 60 * 1000) {
+        container.innerHTML = buildPdfRecordsTable(cached.records, true);
+        return;
       }
     } catch (e) {}
   }
-  container.innerHTML = buildPdfRecordsTable(records, true);
+
+  container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--c-text-muted);">正在探测云端已下载 PDF…</div>';
+  try {
+    const { resp, data } = await apiFetch(`/api/download?list=1`);
+    if (resp.ok && data && Array.isArray(data.list)) {
+      // 过滤目标年度 + 反查全称
+      const records = data.list
+        .filter(f => f.year === year)
+        .map(f => {
+          const full = COMPANIES_92.find(c => (SHORT_NAME_MAP[c.full_name] || c.full_name) === f.company);
+          return { company: full ? full.full_name : f.company, short: f.company, year: f.year, source: 'cloud', size: null };
+        });
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), records }));
+      container.innerHTML = buildPdfRecordsTable(records, true);
+      return;
+    }
+    // 接口异常（如存储未绑定）→ 给出明确提示
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--c-text-muted);">探测失败：' + ((data && data.error) || '接口异常') +
+      '<br/><span style="font-size:11px;color:#8A6A2E;">可能原因：Cloudflare 存储绑定未配置（Settings → Functions → KV/R2 bindings → STORE），或 KV 同步延迟（1-3 分钟）</span></div>';
+  } catch (e) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--c-text-muted);">探测失败：' + e.message + '</div>';
+  }
 }
 
 function buildPdfRecordsTable(records, isCloud) {

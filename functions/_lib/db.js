@@ -179,3 +179,17 @@ export async function exists(env, key, { memory } = {}) {
   const store = memory || env?.STORE;
   return storeExists(store, key);
 }
+
+// 列出存储中指定前缀的 key 列表（KV: res.keys[].name；R2: res.objects[].key）
+export async function storeList(store, prefix = '') {
+  if (!store) return [];
+  try {
+    const res = await store.list({ prefix });
+    if (res && Array.isArray(res.keys)) return res.keys.map(k => k.name).filter(Boolean);
+    if (res && Array.isArray(res.objects)) return res.objects.map(o => o.key).filter(Boolean);
+    return [];
+  } catch (e) {
+    console.error('storeList error', e);
+    return [];
+  }
+}
