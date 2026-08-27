@@ -27,6 +27,11 @@ const AES_IV = '0840e274812143f5';    // captchaCheck.js 中的 AES IV（utf8）
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
 const DEFAULT_SLEEP = 400;
 
+// 模块级列表缓存（同一 isolate 内跨请求共享，避免每次下载都重新拉 ~1MB 全量列表）
+// 年报列表一天最多更新几条，6 小时 TTL 足够新鲜
+const LIST_TTL = 6 * 60 * 60 * 1000;
+let _listCache = null; // { records, ts }
+
 // ---------- 工具 ----------
 
 // 生成 clientIdCard：30位 Fisher-Yates 洗牌随机串 + 毫秒时间戳
@@ -71,7 +76,7 @@ function parseInfoList(html) {
 // ---------- 客户端 ----------
 
 // 创建带 cookie 会话 / 列表缓存的客户端。同一 client 可复用于批量下载（列表只拉一次）。
-export function createIachinaClient({ timeout = 15000, sleepMs = DEFAULT_SLEEP } = {}) {
+export function createIachinaClient({ timeout = 25000, sleepMs = DEFAULT_SLEEP } = {}) {
   const clientId = genClientId();
   const cookies = new Map();
   let sessionDone = false;
@@ -96,13 +101,20 @@ export function createIachinaClient({ timeout = 15000, sleepMs = DEFAULT_SLEEP }
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), timeout);
       try {
-        const resp = await fetch(BASE + path, {
-          method,
-          headers,
-          body: body != null ? body : undefined,
-          redirect: 'follow',
-          signal: ctl.signal,
-        });
+        let resp;
+        try {
+          resp = await fetch(BASE + path, {
+            method,
+            headers,
+            body: body != null ? body : undefined,
+            redirect: 'follow',
+            signal: ctl.signal,
+          });
+        } catch (e) {
+          // 超时中断等网络异常转为可控返回（aborted 标记供上层重试）
+          const aborted = e && (e.name === 'AbortError' || /aborted/i.test(e.message || ''));
+          return { status: 0, ok: false, aborted, error: (e && e.message) || String(e) };
+        }
         // 收集 set-cookie（Workers 与 Node 19.7+ 均支持 getSetCookie）
         const setCookie = typeof resp.headers.getSetCookie === 'function'
           ? resp.headers.getSetCookie()
@@ -148,16 +160,26 @@ export function createIachinaClient({ timeout = 15000, sleepMs = DEFAULT_SLEEP }
     },
 
     // 步骤3：拉取全量披露列表（一次返回全部，约3100条，GBK）
+    // 优先用模块级缓存（同 isolate 跨请求共享）；拉取超时会重试一次
     async loadList() {
+      if (_listCache && Date.now() - _listCache.ts < LIST_TTL) {
+        return { ok: true, records: _listCache.records, cached: true };
+      }
       if (list) return { ok: true, records: list };
       const s = await this.ensureSession();
       if (!s.ok) return s;
       await this.sleep();
-      const r = await this.req('POST', `/front/getAllInfosByCid.do?columnid=${COLUMN_ANNUAL}`, { body: 'pageNo=1' });
-      if (!r.ok) return { ok: false, error: `中保协年报列表获取失败 HTTP ${r.status}` };
+      let r;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        r = await this.req('POST', `/front/getAllInfosByCid.do?columnid=${COLUMN_ANNUAL}`, { body: 'pageNo=1' });
+        if (r.ok || !r.aborted) break;
+        if (attempt < 2) await this.sleep(1500); // 超时后等 1.5s 重试一次
+      }
+      if (!r.ok) return { ok: false, error: `中保协年报列表获取失败 HTTP ${r.status}${r.aborted ? '（超时）' : ''}` };
       const html = new TextDecoder('gbk').decode(r.buf);
       list = parseInfoList(html);
       if (!list.length) return { ok: false, error: '中保协年报列表为空' };
+      _listCache = { records: list, ts: Date.now() };
       return { ok: true, records: list };
     },
 
