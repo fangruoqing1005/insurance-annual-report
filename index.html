@@ -1526,6 +1526,10 @@ body {
           <button class="btn-apply cloud-only" id="btnDownloadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
             <i class="fa-solid fa-download" style="font-size:11px;"></i> 下载 PDF
           </button>
+          <label style="display:inline-flex;align-items:center;gap:4px;margin-left:4px;font-size:12px;color:var(--c-text-secondary);cursor:pointer;">
+            <input type="checkbox" id="dlSaveLocalCheck" style="cursor:pointer;">
+            同时保存到本地
+          </label>
           <button class="btn-apply cloud-only" id="btnUploadPdf" style="width:auto;padding:6px 14px;font-size:12px;">
             <i class="fa-solid fa-upload" style="font-size:11px;"></i> 上传 PDF
           </button>
@@ -3558,8 +3562,9 @@ function initDownloadView() {
     if (!company) { setDlOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
     if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
     const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || '';
+    const saveLocal = document.getElementById('dlSaveLocalCheck').checked;
     setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF（未登记地址时将自动从中保协披露系统搜索）…`);
-    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName, localSave: true } });
+    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName, localSave: saveLocal } });
     if (resp.ok && data.ok && data.needUpload) {
       let html = `下载失败：${data.message || '未配置下载地址'}${data.notFound ? '' : '（可手动下载后点「上传 PDF」提交，或在「智能提取 → 下载地址配置」登记直链）'}`;
       if (data.base64) {
