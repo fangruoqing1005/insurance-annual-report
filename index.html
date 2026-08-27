@@ -1460,7 +1460,7 @@ body {
         获取渠道：① 中国保险行业协会年度信息披露栏目（优先）→ ② 各公司官网「公开信息披露」→ 附件。
         注意区分《年度信息披露报告》(简版，部分无附注) 与《年度财务报表及审计报告》(必须用后者)；命名规范
         <code>{公司全称}_{年度}年年度报告.pdf</code>。
-        <span class="cloud-only" style="margin-left:6px;">云模式：选择目标公司后点「下载 PDF」（自动抓取需先在 <b>智能提取 → 下载地址配置</b> 中登记 PDF 地址，未登记的公司请手动下载后点「上传 PDF」）；AI 提取入库在「智能提取」页执行。</span>
+        <span class="cloud-only" style="margin-left:6px;">云模式：选择目标公司后点「下载 PDF」——自动抓取会优先查询已登记的下载地址，未登记的公司将自动从中保协信息披露系统搜索下载（覆盖全部险企、支持任意年度）；手动下载的 PDF 可点「上传 PDF」提交；AI 提取入库在「智能提取」页执行。</span>
       </div>
 
       <!-- 云模式操作区 -->
@@ -1629,8 +1629,9 @@ body {
           </div>
           <div class="src-list" id="srcList"></div>
           <div class="src-tip">
-            说明：登记的地址用于「下载 PDF」时自动抓取。地址为公司年度报告 PDF 的直链（各公司官网「公开信息披露」栏目或中保协下载链接）。
-            未登记地址的公司，点「下载 PDF」会提示手动下载后上传。保存后立即生效。
+            说明：此处登记的是公司年度报告 PDF 的直链（各公司官网「公开信息披露」栏目或中保协下载链接），优先级最高。
+            未登记地址的公司，点「下载 PDF」会自动从中保协信息披露系统搜索下载（覆盖全部险企、支持任意年度）；
+            中保协也找不到时才会提示手动下载后上传。保存后立即生效。
           </div>
           <div class="batch-actions">
             <button class="btn-apply" id="srcClose" style="width:auto;padding:6px 14px;font-size:12px;">关闭</button>
@@ -3316,17 +3317,19 @@ function initDownloadView() {
   const dlPicker = createCompanyPicker('dlCompanyInput', 'dlCompanyVal', 'dlCompanyList');
   const dlYear = () => document.getElementById('dlTargetYear').value;
 
-  // 单公司下载 PDF（自动抓取 sources.json 映射；未配置则提示上传）
+  // 单公司下载 PDF（优先 sources.json 静态地址；未配置则中保协自动搜索下载）
   document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
     const company = dlPicker.value;
     if (!company) { setDlOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
     if (!isCloudMode) { setDlOps('需部署到 Cloudflare 后可用', 'err'); return; }
-    setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF…`);
-    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear() } });
+    const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || '';
+    setDlOps(`正在尝试下载 ${company} ${dlYear()} 的 PDF（未登记地址时将自动从中保协披露系统搜索）…`);
+    const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullName } });
     if (resp.ok && data.ok && data.needUpload) {
-      setDlOps(`未配置 ${company} 的自动下载地址，请手动下载后点「上传 PDF」提交文件。（可到「智能提取 → 下载地址配置」登记地址后自动抓取）`);
+      setDlOps(`下载失败：${data.message || '未配置下载地址'}${data.notFound ? '' : '（可手动下载后点「上传 PDF」提交，或在「智能提取 → 下载地址配置」登记直链）'}`, 'err');
     } else if (resp.ok && data.ok) {
-      setDlOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB），可到「智能提取」页执行 AI 提取入库`, 'ok');
+      const srcTxt = data.source === 'iachina' ? `（中保协自动抓取：${data.title || ''}）` : '';
+      setDlOps(`下载成功：${data.pdfKey}（${(data.bytes / 1024).toFixed(0)} KB）${srcTxt}，可到「智能提取」页执行 AI 提取入库`, 'ok');
       localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
       renderDownloadView();
     } else {
@@ -3367,15 +3370,22 @@ function initDownloadView() {
   });
 
   // 批量下载（串行逐个请求，避免 Cloudflare Workers 30s 限制）
+  // 后端：静态地址优先，未配置地址自动走中保协披露系统搜索下载
   async function batchDownload(list, setStatus) {
     let okN = 0, skipN = 0, failN = 0;
     const failed = [];
+    const fullNames = {};
+    list.forEach(s => {
+      const f = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === s) || {}).full_name;
+      if (f) fullNames[s] = f;
+    });
     for (let i = 0; i < list.length; i++) {
       const company = list[i];
       setStatus(`批量下载 ${i + 1}/${list.length}：${company} …`);
-      const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear() } });
+      const { resp, data } = await apiFetch('/api/download', { method: 'POST', body: { company, year: dlYear(), fullNames } });
       if (resp.ok && data.ok && data.needUpload) {
         skipN++;
+        failed.push(company + ':' + (data.message || '中保协未找到'));
       } else if (resp.ok && data.ok) {
         okN++;
         localStorage.setItem('dl_pdf_status', JSON.stringify({ ...JSON.parse(localStorage.getItem('dl_pdf_status') || '{}'), [company]: 1 }));
@@ -3385,7 +3395,7 @@ function initDownloadView() {
       }
     }
     renderDownloadView();
-    setStatus(`批量完成：成功 ${okN} 家 / 未配置地址跳过 ${skipN} 家 / 失败 ${failN} 家${failed.length ? '（' + failed.join('；') + '）' : ''}`, okN ? 'ok' : (failN ? 'err' : ''));
+    setStatus(`批量完成：成功 ${okN} 家 / 跳过(未找到或失败) ${skipN} 家 / 错误 ${failN} 家${failed.length ? '（' + failed.join('；') + '）' : ''}`, okN ? 'ok' : (failN || skipN ? 'err' : ''));
   }
 
   // 类型下拉填充（下载页批量 + 多选弹窗共用）
@@ -3400,7 +3410,7 @@ function initDownloadView() {
     const type = batchTypeSel.value;
     const list = COMPANIES_92.filter(c => !type || c.type === type).map(c => SHORT_NAME_MAP[c.full_name]);
     if (!list.length) { setDlOps('该类型下无公司', 'err'); return; }
-    if (!window.confirm(`将批量下载「${type || '全部类型'}」${list.length} 家公司 PDF（未配置自动下载地址的公司会提示跳过），是否继续？`)) return;
+    if (!window.confirm(`将批量下载「${type || '全部类型'}」${list.length} 家公司 PDF（未登记地址的公司会自动从中保协披露系统搜索，找不到的会提示跳过），是否继续？`)) return;
     setDlOps(`开始批量下载 ${list.length} 家公司…`);
     await batchDownload(list, setDlOps);
   });
