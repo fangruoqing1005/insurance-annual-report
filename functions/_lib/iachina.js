@@ -76,7 +76,7 @@ function parseInfoList(html) {
 // ---------- 客户端 ----------
 
 // 创建带 cookie 会话 / 列表缓存的客户端。同一 client 可复用于批量下载（列表只拉一次）。
-export function createIachinaClient({ timeout = 25000, sleepMs = DEFAULT_SLEEP } = {}) {
+export function createIachinaClient({ timeout = 29000, sleepMs = DEFAULT_SLEEP } = {}) {
   const clientId = genClientId();
   const cookies = new Map();
   let sessionDone = false;
@@ -231,7 +231,12 @@ export function createIachinaClient({ timeout = 25000, sleepMs = DEFAULT_SLEEP }
     async downloadPdf(fileName) {
       await this.sleep();
       const r = await this.req('GET', `/files/piluxinxi/pdf/${fileName}`);
-      if (!r.ok) return { ok: false, error: `中保协 PDF 下载失败 HTTP ${r.status}` };
+      if (!r.ok) {
+        // 超时通常是年报 PDF 较大（10MB+），Cloudflare 服务器抓取超过时限；与用户本地网络无关
+        return { ok: false, error: r.aborted
+          ? `中保协 PDF 下载超时（${Math.round(timeout / 1000)}s 限制，年报文件较大时易触发），可稍后重试或手动下载后上传`
+          : `中保协 PDF 下载失败 HTTP ${r.status}` };
+      }
       return { ok: true, buf: r.buf };
     },
   };

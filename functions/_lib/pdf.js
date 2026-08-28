@@ -3,9 +3,20 @@
 // 注意：使用 pdfjs-dist 3.x（4.x 的 legacy 构建与 Cloudflare Pages 打包器 esbuild 不兼容，
 //       会产生 "Cannot read properties of undefined (reading 'has')" 运行时错误）
 import * as pdfjsNS from 'pdfjs-dist/legacy/build/pdf.js';
+import * as pdfjsWorkerNS from 'pdfjs-dist/legacy/build/pdf.worker.js';
 // 兼容 node ESM（CJS interop 走 default）与 esbuild 打包（命名导出直通）
 const pdfjs = pdfjsNS.getDocument ? pdfjsNS : (pdfjsNS.default || pdfjsNS);
 const { getDocument } = pdfjs;
+
+// Cloudflare Workers 环境既无 process 也无 document，pdfjs 无法自动禁用 worker 或推断 workerSrc，
+// getDocument 会抛 "No "GlobalWorkerOptions.workerSrc" specified."（生产提取一直受影响，本地 Node 正常）。
+// 解决：把 worker 模块的 WorkerMessageHandler 注入 globalThis.pdfjsWorker ——
+//       pdfjs 检测到 #mainThreadWorkerMessageHandler 后走同线程 fake worker（LoopbackPort），
+//       既不需要 workerSrc，也不需要真实 Worker 构造函数。
+const pdfjsWorker = pdfjsWorkerNS.WorkerMessageHandler ? pdfjsWorkerNS : (pdfjsWorkerNS.default || pdfjsWorkerNS);
+if (typeof globalThis !== 'undefined' && pdfjsWorker && typeof pdfjsWorker.WorkerMessageHandler === 'function') {
+  globalThis.pdfjsWorker = { WorkerMessageHandler: pdfjsWorker.WorkerMessageHandler };
+}
 
 // 防御：pdfjs getDocument 会 transfer 传入的 buffer，调用方可能复用同一份数据 → 拷贝
 function toUint8(pdfData) {
