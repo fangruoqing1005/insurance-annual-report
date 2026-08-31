@@ -25,31 +25,47 @@ export async function onRequest({ request, env }) {
       const company = (body.company || '').trim();
       const year = (body.year || '2025年度').trim();
       if (!company) return fail('缺少 company 参数');
+      // 前端已解析的 PDF 文本（规避 Cloudflare 免费计划 CPU 10ms 限制：pdfjs 解析在浏览器完成）
+      // fullText: 带 PDF_PAGE_N 标记的全文（定位表格用）；coordPages: 坐标化表格文本按页数组（AI 提取用）
+      const fullText = (typeof body.fullText === 'string' && body.fullText.length > 100) ? body.fullText : null;
+      const coordPages = Array.isArray(body.coordPages) ? body.coordPages : null;
+      // 分批提取：tables 限定本次处理的报表集合（如 ["T01","T02","T03"]），控制单请求 CPU 与时长
+      const tables = Array.isArray(body.tables) && body.tables.length
+        ? body.tables.map(t => String(t).toUpperCase()).filter(t => /^T\d{2}$/.test(t))
+        : null;
 
       // 1) 读取模板（存储优先，未初始化用内置）
       let template = await readJSON(env, env.TPL_KEY || 'template_163.json', null);
       if (!template || !template.length) template = BUILTIN_TEMPLATE;
 
-      // 2) 读 PDF
+      // 2) 校验 PDF 存在
       const pdfKey = `${env.PDF_PREFIX || 'pdfs/'}${company}_${year}.pdf`;
       if (!(await exists(env, pdfKey))) {
         return fail(`未找到 PDF：${pdfKey}，请先下载或上传`, 404);
       }
-      const pdfData = await storeGetBytes(env.STORE, pdfKey);
-      if (!pdfData) return fail('读取 PDF 失败，请重新下载或上传');
 
-      // 3) 全文提取
-      const fullText = await extractText(pdfData);
-      if (fullText.length < 100) return fail('PDF 文本提取过短，可能不是文本型 PDF');
+      // 3) 全文文本：优先用前端解析结果；否则后端解析（兜底，免费计划下可能超 CPU 限制）
+      let pdfData = null;
+      let fullText0 = fullText;
+      if (!fullText0 || !coordPages) {
+        pdfData = await storeGetBytes(env.STORE, pdfKey);
+        if (!pdfData) return fail('读取 PDF 失败，请重新下载或上传');
+      }
+      if (!fullText0) {
+        fullText0 = await extractText(pdfData);
+        if (fullText0.length < 100) return fail('PDF 文本提取过短，可能不是文本型 PDF');
+      }
 
       // 4) 逐表提取：每页一次调用（模型只做行提取），合并后由后端 matchIndicators 匹配指标
       const tplCodes = [...new Set(template.map(r => r[3]))].sort();
+      const batchCodes = tables ? tplCodes.filter(t => tables.includes(t)) : tplCodes;
+      if (!batchCodes.length) return fail('tables 参数未匹配到模板中的报表（如 T01-T10）');
       const allRowsByTable = {};
       const tableNotes = [];
-      for (const tCode of tplCodes) {
+      for (const tCode of batchCodes) {
         const inds = template.filter(r => r[3] === tCode);
         const tableName = inds[0]?.[4] || tCode;
-        const loc = locateTable(fullText, TABLE_KEYWORDS[tCode] || [tableName]);
+        const loc = locateTable(fullText0, TABLE_KEYWORDS[tCode] || [tableName]);
         if (!loc) {
           tableNotes.push(`${tCode}: 未定位到关键词，跳过`);
           continue;
@@ -60,7 +76,10 @@ export async function onRequest({ request, env }) {
         let matchedRows = [];
         let reached = null;
         for (let p = loc.startPage; p <= loc.endPage; p++) {
-          const pageSlice = await extractTableText(pdfData, p, p);
+          // 优先使用前端上传的坐标文本（零后端 CPU）；否则后端提取（兜底）
+          const pageSlice = coordPages && coordPages[p - 1] != null
+            ? coordPages[p - 1]
+            : await extractTableText(pdfData, p, p);
           if (pageSlice.length < 60) continue; // 空白页跳过
           const pageRes = await extractTable(env, {
             tCode, tableName, indicators: inds, sliceText: pageSlice, companyName: company, year
@@ -114,15 +133,20 @@ export async function onRequest({ request, env }) {
       // 6) 勾稽验证
       const checks = runChecks(rows);
 
-      // 7) 入库（upsert：公司+报告期 范围内的行替换）
+      // 7) 入库（upsert）：分批时只替换本批 tables 范围内的旧行，保证多次分批调用可正确累积
       const existing = await readDB(env);
-      // 先删除该公司该报告期的旧行，再合并（保证 upsert 语义完整）
-      const others = existing.filter(x => !(x['公司名称'] === company && x['报告期'] === year));
+      const scopeTables = batchCodes.length && batchCodes.length < tplCodes.length ? batchCodes : null;
+      const others = existing.filter(x => {
+        if (x['公司名称'] !== company || x['报告期'] !== year) return true;
+        if (scopeTables) return !scopeTables.includes(x['报表类型']); // 分批：保留批外旧行
+        return false; // 全量：删除该公司该报告期全部旧行
+      });
       const merged = upsertRows(others, rows);
       await writeDB(env, merged);
 
       return ok({
         company, year,
+        batchTables: batchCodes,
         matched: matchedCount,
         rowsAdded: rows.length,
         dbRows: merged.length,

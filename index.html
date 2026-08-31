@@ -3780,48 +3780,81 @@ function initDownloadView() {
   extPicker = createCompanyPicker('extCompanyInput', 'extCompanyVal', 'extCompanyList');
 
   // AI 提取入库（含勾稽验证）
+  // 架构：前端浏览器解析 PDF 文本（免费计划 CPU 10ms 限制）→ 分批（每批 3 张报表）调 /api/extract
+  const TABLES_BATCH = 3;
   document.getElementById('btnExtract').addEventListener('click', async () => {
     const company = extPicker.value;
     const year = document.getElementById('extTargetYear').value;
     if (!company) { setExtOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
     if (!isCloudMode) { setExtOps('需部署到 Cloudflare 后可用', 'err'); return; }
     const companyType = extPicker.meta.type || '';
-    setExtOps(`正在 AI 提取 ${company} ${year} 的指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
-    const { resp, data } = await apiFetch('/api/extract', {
-      method: 'POST',
-      body: { company, year, companyType }
-    });
-    if (resp.ok && data.ok) {
-      const checkSummary = (data.checks || []).map(c => c.pass === null ? `${c.name}跳过` : (c.pass ? `${c.name}✓` : `${c.name}✗`)).join(' | ');
-      const susp = (data.suspicious || []).length;
-      let html = `提取完成：新增 ${data.rowsAdded} 行，勾稽：${checkSummary}。数据库现有 ${data.dbRows} 行。`;
-      if (susp) html += `<br/><span class="err">⚠ ${susp} 项行名可疑（${data.suspicious.map(s => s.code + ':' + s.指标名称).join('、')}），请到数据库页核对</span>`;
-      if ((data.checks || []).some(c => c.pass === false)) html += `<br/><span class="err">⚠ 存在未通过的勾稽项，请人工核查</span>`;
-      setExtOps(html, data.rowsAdded ? 'ok' : '');
+    const btn = document.getElementById('btnExtract');
+    const origHtml = btn.innerHTML;
+    try {
+      // 1) 前端解析 PDF 文本（下载+逐页提取，浏览器无 CPU 限制）
+      setExtOps(`正在下载并解析 ${company} ${year} 的 PDF 文本（此步骤在本地浏览器完成，约 10-40 秒）…`);
+      const doc = await fetchPdfDoc(company, year);
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 提取中';
+      const { fullText, coordPages } = await extractPdfTextsForAI(doc, (p, total) => {
+        setExtOps(`正在解析 PDF 文本（${p}/${total} 页）…`);
+      });
+      // 2) 分批提取：每批 3 张报表，控制单请求 CPU（<10ms）与时长
+      const tplCodes = [...new Set((TEMPLATE_163 || []).map(r => r[3]))].sort();
+      const batches = [];
+      for (let i = 0; i < tplCodes.length; i += TABLES_BATCH) batches.push(tplCodes.slice(i, i + TABLES_BATCH));
+      let totalAdded = 0;
+      const allSusp = [], allChecks = [], batchNotes = [];
+      for (let bi = 0; bi < batches.length; bi++) {
+        const batch = batches[bi];
+        setExtOps(`正在 AI 提取 ${company} ${year}（批次 ${bi + 1}/${batches.length}：${batch.join(' / ')}），每批预计 1-3 分钟，请耐心等待…`);
+        const { resp, data } = await apiFetch('/api/extract', {
+          method: 'POST',
+          body: { company, year, companyType, fullText, coordPages, tables: batch }
+        });
+        if (!resp.ok || !data.ok) {
+          const errDetail = (data && data.error) ? data.error : ('HTTP ' + resp.status);
+          throw new Error(`批次 ${batch.join('/')} 提取失败：${errDetail}`);
+        }
+        totalAdded += data.rowsAdded || 0;
+        allSusp.push(...(data.suspicious || []));
+        allChecks.push(...(data.checks || []));
+        batchNotes.push(`批次${bi + 1}(${batch.join('/')}): +${data.rowsAdded || 0}行`);
+      }
+      // 3) 汇总显示
+      const checkSummary = allChecks.map(c => c.pass === null ? `${c.name}跳过` : (c.pass ? `${c.name}✓` : `${c.name}✗`)).join(' | ');
+      let html = `提取完成：新增 ${totalAdded} 行（${batchNotes.join('；')}），勾稽：${checkSummary || '无'}。`;
+      if (allSusp.length) html += `<br/><span class="err">⚠ ${allSusp.length} 项行名可疑（${allSusp.map(s => s.code + ':' + s.指标名称).join('、')}），请到数据库页核对</span>`;
+      if (allChecks.some(c => c.pass === false)) html += `<br/><span class="err">⚠ 存在未通过的勾稽项，请人工核查</span>`;
+      setExtOps(html, totalAdded ? 'ok' : '');
       // 刷新动态数据（云模式）
       await refreshCloudData();
-    } else {
-      let errHtml = `提取失败：${(data && data.error) || '未知错误'}`;
-      const isNotFound = (data && data.error && data.error.includes('未找到 PDF'));
-      if (isNotFound) {
+    } catch (e) {
+      let errHtml = `提取失败：${e.message}`;
+      if (e.message.includes('未找到 PDF')) {
         errHtml += `<br><span style="color:#8A6A2E;font-size:11px;">常见原因：① Cloudflare KV 存储有 1-3 分钟全球同步延迟，请稍后刷新；② PDF 未成功保存到云端。可先到「年报下载」页点「刷新状态」确认 PDF 已存在。</span>
           <button class="btn-reset" id="btnRecheckPdf" style="margin-left:8px;">重新探测 PDF</button>`;
-      }
-      setExtOps(errHtml, 'err');
-      document.getElementById('btnRecheckPdf')?.addEventListener('click', async () => {
-        const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company;
-        setExtOps(`正在探测 ${company} ${year} 的 PDF …`);
-        try {
-          const { resp, data: d } = await apiFetch(`/api/download?company=${encodeURIComponent(fullName)}&year=${encodeURIComponent(year)}`);
-          if (resp.ok && d && d.hasPdf) {
-            setExtOps(`已探测到 PDF：${d.pdfKey}，请重新点击「AI 提取入库」`, 'ok');
-          } else {
-            setExtOps(`未探测到 ${company} ${year} 的 PDF，请先到「年报下载」页下载或上传`, 'err');
+        setExtOps(errHtml, 'err');
+        document.getElementById('btnRecheckPdf')?.addEventListener('click', async () => {
+          const fullName = (COMPANIES_92.find(c => SHORT_NAME_MAP[c.full_name] === company) || {}).full_name || company;
+          setExtOps(`正在探测 ${company} ${year} 的 PDF …`);
+          try {
+            const { resp, data: d } = await apiFetch(`/api/download?company=${encodeURIComponent(fullName)}&year=${encodeURIComponent(year)}`);
+            if (resp.ok && d && d.hasPdf) {
+              setExtOps(`已探测到 PDF：${d.pdfKey}，请重新点击「AI 提取入库」`, 'ok');
+            } else {
+              setExtOps(`未探测到 ${company} ${year} 的 PDF，请先到「年报下载」页下载或上传`, 'err');
+            }
+          } catch (er) {
+            setExtOps('探测失败：' + er.message, 'err');
           }
-        } catch (e) {
-          setExtOps('探测失败：' + e.message, 'err');
-        }
-      });
+        });
+      } else {
+        setExtOps(errHtml, 'err');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
     }
   });
 
@@ -4238,6 +4271,58 @@ async function fetchPdfDoc(company, year) {
   const doc = await pdfjs.getDocument({ data: buf }).promise;
   shotPdfCache.set(key, doc);
   return doc;
+}
+
+// 前端解析 PDF → 生成后端同格式文本。
+// 原因：Cloudflare Workers 免费计划 CPU 限制 10ms/请求，pdfjs 解析（CPU 密集）必须移到浏览器完成；
+//       后端只做字符串定位 + DeepSeek 调用（I/O 等待不计 CPU）。
+// fullText: 带 PDF_PAGE_N 标记的全文（复刻后端 extractText，用于 locateTable 定位表格）
+// coordPages: 坐标化表格文本按页数组（复刻后端 extractTableText 的 y=…[x=…] 格式，用于 AI 逐页提取）
+async function extractPdfTextsForAI(doc, onProgress) {
+  const pages = [];
+  const coordPages = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    onProgress && onProgress(p, doc.numPages);
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    // fullText：按行拼接（y 差 >2 换行），与后端 extractText 一致
+    let text = '';
+    let lastY = null;
+    const words = [];
+    for (const it of content.items) {
+      const str = it.str || '';
+      if (!str) continue;
+      const y = it.transform ? it.transform[5] : 0;
+      const x = it.transform ? it.transform[4] : 0;
+      words.push({ x: Math.round(x), y: Math.round(y), str });
+      if (lastY !== null && Math.abs(y - lastY) > 2) text += '\n';
+      else if (text && !text.endsWith('\n')) text += ' ';
+      text += str;
+      lastY = y;
+    }
+    pages.push(`\n===== PDF_PAGE_${p} =====\n${text}`);
+    // coordText：复刻后端 extractTableText（y 聚类 → x 排序 → [x=N]str）
+    words.sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines = [];
+    let line = [];
+    let curY = null;
+    const flush = () => {
+      if (!line.length) return;
+      const items = line.sort((a, b) => a.x - b.x).map(w => `[x=${w.x}]${w.str}`);
+      lines.push(`y=${line[0].y} ${items.join(' ')}`);
+      line = [];
+    };
+    for (const w of words) {
+      if (curY === null || Math.abs(w.y - curY) <= 4) {
+        if (curY === null) curY = w.y;
+        line.push(w);
+      } else { flush(); curY = w.y; line.push(w); }
+    }
+    flush();
+    coordPages.push(lines.join('\n'));
+    page.cleanup && page.cleanup();
+  }
+  return { fullText: pages.join('\n'), coordPages };
 }
 
 // 行名规范化（与后端 normRowName 一致）：去序数/减/其中/加 前缀、去空白标点

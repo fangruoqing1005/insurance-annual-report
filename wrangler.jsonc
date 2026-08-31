@@ -8,13 +8,13 @@
   "pages_build_output_dir": ".",
   // KV 绑定：因 Pages 项目通过 wrangler.jsonc 管理，Dashboard 的 +Add 被禁用，
   // 必须在此声明并在部署后生效。变量名必须是 STORE，代码中通过 env.STORE 访问。
-  "vars": {
-    "DB_KEY": "raw_data.json",
-    "TPL_KEY": "template_163.json",
-    "PDF_PREFIX": "pdfs/",
-    "STATUS_KEY": "status.json",
-    "SOURCES_KEY": "sources.json"
-  },
+  // 注意：env vars（普通变量 + Secrets）一律走 Cloudflare Dashboard，
+  // 这里不再声明 vars，避免项目被标记为 wrangler 托管、
+  // 导致 Dashboard 无法手动添加变量。代码侧已对每个环境变量写好
+  // `env.KEY || '默认值'` 兜底（见 functions/api/*.js 和 _lib/db.js）。
+  // 敏感密钥（如 AI_API_KEY / ADMIN_PASS）必须只在 Dashboard
+  // Settings → Variables and secrets → Add → Type=Sensitive 加密保存，
+  // 永不进入本文件或 git 历史。
   "kv_namespaces": [
     { "binding": "STORE", "id": "f21a90ac27e7425894910e27a5892521" }
   ]
