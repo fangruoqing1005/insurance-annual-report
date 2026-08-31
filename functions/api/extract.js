@@ -75,7 +75,7 @@ export async function onRequest({ request, env }) {
             break;
           }
         }
-        allRowsByTable[tCode] = { inds, rows: matchedRows };
+        allRowsByTable[tCode] = { inds, rows: matchedRows, loc };
         tableNotes.push(`${tCode}: 用至页 ${reached ?? loc.endPage}，匹配 ${matchedRows.length} 行`);
       }
 
@@ -84,9 +84,11 @@ export async function onRequest({ request, env }) {
       const rows = [];
       const suspicious = [];
       const matchedCount = {};
-      for (const [tCode, { inds, rows: tableRows }] of Object.entries(allRowsByTable)) {
+      for (const [tCode, { inds, rows: tableRows, loc }] of Object.entries(allRowsByTable)) {
         const matched = matchIndicators(inds, tableRows);
         matchedCount[tCode] = Object.keys(matched).length;
+        // 来源表附页码区间（PDF 内部页），供前端「指标截图检索」优先定位；与存量数据格式（…（P93-P94））一致
+        const pageSuffix = loc ? `（P${loc.startPage}-P${loc.endPage}）` : '';
         for (const [code, ext] of Object.entries(matched)) {
           const r = inds.find(x => x[5] === code);
           if (!r) continue;
@@ -104,7 +106,7 @@ export async function onRequest({ request, env }) {
             '指标来源': `${r[6]}-${r[9]}`, '关键词': `${r[6]}-${r[9]}`,
             '期间': per, '计量单位-披露': ext['披露单位'] || r[10] || '元', '计量单位-换算': r[11] || '亿元',
             '数值-披露': disp, '数值-换算': conv,
-            '来源表': ext['来源'] || `${r[3]} ${r[4]}`, '行序号': r[15], '列序号': r[16]
+            '来源表': `${ext['来源'] || `${r[3]} ${r[4]}`}${pageSuffix}`, '行序号': r[15], '列序号': r[16]
           });
         }
       }

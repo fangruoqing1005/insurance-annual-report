@@ -933,6 +933,58 @@ body {
 .dl-link { color: var(--c-navy); text-decoration: none; font-size: 11px; word-break: break-all; }
 .dl-link:hover { text-decoration: underline; }
 /* 智能提取 */
+.ext-collapse-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  user-select: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ext-collapse-head:hover { border-color: var(--c-navy); box-shadow: 0 0 0 1px var(--c-navy); }
+.ext-collapse-arrow { font-size: 12px; color: var(--c-text-secondary); transition: transform .2s; }
+.ext-collapse-head.open .ext-collapse-arrow { transform: rotate(90deg); }
+/* 指标截图检索 */
+.shot-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.shot-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--c-navy-light);
+  font-size: 12px;
+  color: var(--c-navy);
+  flex-wrap: wrap;
+}
+.shot-card-head .shot-page-tag { font-weight: 700; }
+.shot-card-head .shot-hit-text { color: var(--c-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+.shot-card-body { padding: 0; text-align: center; }
+.shot-card-body img { max-width: 100%; display: block; margin: 0 auto; }
+.shot-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  flex-wrap: wrap;
+}
+.shot-db-val { color: #1D6A4F; font-weight: 700; }
+.shot-db-none { color: #8A6A2E; }
 .ext-steps {
   display: flex;
   gap: 0;
@@ -1567,7 +1619,7 @@ body {
     <div class="page-view" id="extractView" style="display:none;">
       <div class="page-header">
         <h2>智能提取</h2>
-        <span class="page-sub">IFRS17 指标定位表全流程 · 163行模板预览 · 提取进度跟踪</span>
+        <span class="page-sub">IFRS17 指标定位表全流程 · 指标模板预览 · 提取进度跟踪</span>
       </div>
 
       <!-- 流程步骤条 -->
@@ -1603,9 +1655,56 @@ body {
         <div class="dl-ops-status" id="extOpsStatus" style="width:100%;max-width:none;"></div>
       </div>
 
+      <!-- 已就绪 PDF 文件（联动年报下载页的已下载记录） -->
+      <div class="dl-ops" id="extPdfPanel" style="display:none;flex-wrap:wrap;align-items:flex-start;">
+        <div style="width:100%;display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:700;">📄 已就绪 PDF 文件</span>
+          <span style="font-size:11px;color:var(--c-text-muted);" id="extPdfCount"></span>
+          <button class="btn-apply" id="btnExtPdfRefresh" style="width:auto;padding:3px 10px;font-size:11px;margin-left:auto;">
+            <i class="fa-solid fa-rotate-right" style="font-size:10px;"></i> 刷新
+          </button>
+        </div>
+        <div style="width:100%;font-size:11px;color:var(--c-text-muted);margin-bottom:6px;">点击行自动填入「目标公司 / 报告期」，再点「AI 提取入库」。数据来源与年报下载页的已下载记录一致（云端存储实时探测 / 本地记录）。</div>
+        <div class="dl-table-wrap" id="extPdfTable" style="width:100%;"></div>
+      </div>
+
+      <!-- 指标截图检索（从报告原文核对提取结果） -->
+      <div class="dl-ops" id="shotPanel" style="display:none;flex-wrap:wrap;align-items:flex-start;">
+        <div style="width:100%;display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:700;">📷 指标截图检索</span>
+          <span style="font-size:11px;color:var(--c-text-muted);">从报告 PDF 原文定位指标所在区域并截图，核对 AI 提取是否正确</span>
+        </div>
+        <div class="dl-ops-left" style="flex-wrap:wrap;gap:8px;align-items:center;">
+          <label>公司：</label>
+          <div class="company-picker" style="width:220px;">
+            <input type="text" class="cp-input" id="shotCompanyInput" placeholder="输入简称/全称，从列表选择" autocomplete="off">
+            <input type="hidden" id="shotCompanyVal">
+            <div class="cp-list" id="shotCompanyList"></div>
+          </div>
+          <label>报告期：</label>
+          <select id="shotYear"></select>
+          <label>指标：</label>
+          <input type="text" id="shotIndicator" list="shotIndicatorList" placeholder="名称或代码，如 B01 / 保险服务收入" autocomplete="off" style="width:190px;padding:4px 8px;font-size:12px;border:1px solid var(--c-border);border-radius:3px;">
+          <datalist id="shotIndicatorList"></datalist>
+          <label>期间：</label>
+          <select id="shotPeriod">
+            <option value="">全部</option>
+            <option value="本期">本期</option>
+            <option value="上期">上期</option>
+            <option value="期末">期末</option>
+            <option value="期初">期初</option>
+          </select>
+          <button class="btn-apply" id="btnShotSearch" style="width:auto;padding:6px 14px;font-size:12px;background:#1D6A4F;">
+            <i class="fa-solid fa-magnifying-glass" style="font-size:11px;"></i> 检索截图
+          </button>
+        </div>
+        <div class="dl-ops-status" id="shotStatus" style="width:100%;max-width:none;"></div>
+        <div id="shotResults" style="width:100%;"></div>
+      </div>
+
       <!-- 模板管理（云模式）：下载当前 / 上传覆盖 -->
       <div class="ext-tpl-mgmt cloud-only" id="extTplMgmt" style="display:none;">
-        <span style="font-size:12px;color:var(--c-text-secondary);">163 行指标模板管理：</span>
+        <span style="font-size:12px;color:var(--c-text-secondary);">指标模板管理：</span>
         <button class="btn-apply cloud-only" id="btnTplDownload" style="width:auto;padding:5px 12px;font-size:12px;">
           <i class="fa-solid fa-download" style="font-size:11px;"></i> 下载当前模板
         </button>
@@ -1618,7 +1717,7 @@ body {
 
       <div class="ext-toolbar">
         <div class="ext-tabs">
-          <button class="ext-tab active" data-tab="template">163行指标模板</button>
+          <button class="ext-tab active" data-tab="template">指标模板</button>
           <button class="ext-tab" data-tab="progress">提取进度</button>
         </div>
         <button class="btn-apply" id="btnCopyPrompt" style="width:auto;padding:6px 14px;font-size:12px;">
@@ -1626,11 +1725,17 @@ body {
         </button>
       </div>
 
-      <!-- 模板预览 -->
+      <!-- 模板预览（默认折叠，点击表头展开） -->
       <div class="ext-panel" id="extTemplatePanel">
-        <div class="db-card" style="margin-top:10px;">
-          <div class="ext-tpl-summary" id="extTplSummary"></div>
-          <div class="dl-table-wrap" id="extTplTable"></div>
+        <div class="ext-collapse-head" id="extTplHead">
+          <span>📋 指标模板预览</span>
+          <span class="ext-collapse-arrow" id="extTplArrow">▸ 展开</span>
+        </div>
+        <div id="extTplBody" style="display:none;">
+          <div class="db-card" style="margin-top:10px;">
+            <div class="ext-tpl-summary" id="extTplSummary"></div>
+            <div class="dl-table-wrap" id="extTplTable"></div>
+          </div>
         </div>
       </div>
 
@@ -3492,56 +3597,6 @@ function initDownloadView() {
     renderDownloadView();
   });
 
-  // 公司联想选择器组件（92家限定：输入过滤 + 必须从列表选）
-  function createCompanyPicker(inputId, valId, listId) {
-    const input = document.getElementById(inputId);
-    const val = document.getElementById(valId);
-    const list = document.getElementById(listId);
-    let items = [];
-    const close = () => { list.style.display = 'none'; };
-    const select = (c) => {
-      const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
-      input.value = short + ' · ' + c.full_name;
-      val.value = short;
-      val.dataset.full = c.full_name;
-      val.dataset.type = c.type;
-      close();
-    };
-    input.addEventListener('input', () => {
-      val.value = '';
-      const q = input.value.trim();
-      if (!q) { close(); return; }
-      items = COMPANIES_92.filter(c =>
-        c.full_name.includes(q) || (SHORT_NAME_MAP[c.full_name] || '').includes(q)
-      ).slice(0, 20);
-      if (!items.length) {
-        list.innerHTML = '<div class="cp-empty">未找到匹配公司（仅支持 92 家列表内公司）</div>';
-        list.style.display = 'block';
-        return;
-      }
-      list.innerHTML = items.map((c, i) =>
-        `<div class="cp-item${i === 0 ? ' active' : ''}" data-i="${i}"><span>${SHORT_NAME_MAP[c.full_name] || c.full_name}</span><span class="cp-full">${c.full_name}</span></div>`
-      ).join('');
-      list.style.display = 'block';
-    });
-    list.addEventListener('click', (e) => {
-      const el = e.target.closest('.cp-item');
-      if (el && items[+el.dataset.i]) select(items[+el.dataset.i]);
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); if (items.length) select(items[0]); }
-      if (e.key === 'Escape') close();
-    });
-    input.addEventListener('blur', () => setTimeout(close, 150));
-    document.addEventListener('click', (e) => { if (!e.target.closest('.company-picker')) close(); });
-    return {
-      get value() { return val.value; },
-      get meta() { return { full: val.dataset.full, type: val.dataset.type }; },
-      isValid() { return !!val.value; },
-      clear() { input.value = ''; val.value = ''; }
-    };
-  }
-
   // 弹窗开关
   const openOverlay = (id) => document.getElementById(id).classList.add('show');
   const closeOverlay = (id) => document.getElementById(id).classList.remove('show');
@@ -3722,7 +3777,7 @@ function initDownloadView() {
   // ---- 智能提取页 ----
   const extOpsStatus = document.getElementById('extOpsStatus');
   const setExtOps = (html, cls) => { extOpsStatus.innerHTML = html; extOpsStatus.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
-  const extPicker = createCompanyPicker('extCompanyInput', 'extCompanyVal', 'extCompanyList');
+  extPicker = createCompanyPicker('extCompanyInput', 'extCompanyVal', 'extCompanyList');
 
   // AI 提取入库（含勾稽验证）
   document.getElementById('btnExtract').addEventListener('click', async () => {
@@ -3731,7 +3786,7 @@ function initDownloadView() {
     if (!company) { setExtOps('请选择目标公司（输入简称/全称后从列表点选）', 'err'); return; }
     if (!isCloudMode) { setExtOps('需部署到 Cloudflare 后可用', 'err'); return; }
     const companyType = extPicker.meta.type || '';
-    setExtOps(`正在 AI 提取 ${company} ${year} 的 163 行指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
+    setExtOps(`正在 AI 提取 ${company} ${year} 的指标（含勾稽验证），预计 3-8 分钟，请耐心等待…`);
     const { resp, data } = await apiFetch('/api/extract', {
       method: 'POST',
       body: { company, year, companyType }
@@ -4084,7 +4139,333 @@ function buildPdfRecordsTable(records, isCloud) {
   `;
 }
 
-// ============== 智能提取 View（163模板 + 进度看板） ==============
+// ============== 智能提取 View（模板 + 进度看板） ==============
+let extPicker = null; // 云模式操作区初始化时赋值（createCompanyPicker）
+
+// 公司联想选择器组件（92家限定：输入过滤 + 必须从列表选；顶层定义供多个视图复用）
+function createCompanyPicker(inputId, valId, listId) {
+  const input = document.getElementById(inputId);
+  const val = document.getElementById(valId);
+  const list = document.getElementById(listId);
+  let items = [];
+  const close = () => { list.style.display = 'none'; };
+  const select = (c) => {
+    const short = SHORT_NAME_MAP[c.full_name] || c.full_name;
+    input.value = short + ' · ' + c.full_name;
+    val.value = short;
+    val.dataset.full = c.full_name;
+    val.dataset.type = c.type;
+    close();
+  };
+  input.addEventListener('input', () => {
+    val.value = '';
+    const q = input.value.trim();
+    if (!q) { close(); return; }
+    items = COMPANIES_92.filter(c =>
+      c.full_name.includes(q) || (SHORT_NAME_MAP[c.full_name] || '').includes(q)
+    ).slice(0, 20);
+    if (!items.length) {
+      list.innerHTML = '<div class="cp-empty">未找到匹配公司（仅支持 92 家列表内公司）</div>';
+      list.style.display = 'block';
+      return;
+    }
+    list.innerHTML = items.map((c, i) =>
+      `<div class="cp-item${i === 0 ? ' active' : ''}" data-i="${i}"><span>${SHORT_NAME_MAP[c.full_name] || c.full_name}</span><span class="cp-full">${c.full_name}</span></div>`
+    ).join('');
+    list.style.display = 'block';
+  });
+  list.addEventListener('click', (e) => {
+    const el = e.target.closest('.cp-item');
+    if (el && items[+el.dataset.i]) select(items[+el.dataset.i]);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); if (items.length) select(items[0]); }
+    if (e.key === 'Escape') close();
+  });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  document.addEventListener('click', (e) => { if (!e.target.closest('.company-picker')) close(); });
+  return {
+    get value() { return val.value; },
+    get meta() { return { full: val.dataset.full, type: val.dataset.type }; },
+    isValid() { return !!val.value; },
+    clear() { input.value = ''; val.value = ''; },
+    select(c) { select(c); }, // 供外部联动填充（如点击「已就绪 PDF」行）
+    setDisplay(text) { input.value = text; } // 仅显示不触发选择
+  };
+}
+
+// ===== 指标截图检索（pdf.js 前端定位 + 渲染裁剪）=====
+let shotPicker = null;
+const shotPdfCache = new Map(); // `${company}_${year}` -> pdfjs document（会话内缓存）
+
+// 多 CDN 动态加载 pdf.js（公司网络可能屏蔽个别 CDN；与后端同版本 3.11.174）
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  const sources = [
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
+  ];
+  const workers = [
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+  ];
+  return new Promise((resolve, reject) => {
+    const tryLoad = (i) => {
+      if (i >= sources.length) return reject(new Error('pdf.js 加载失败（所有 CDN 均不可达）'));
+      const s = document.createElement('script');
+      s.src = sources[i];
+      s.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = workers[i];
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = () => tryLoad(i + 1);
+      document.head.appendChild(s);
+    };
+    tryLoad(0);
+  });
+}
+
+// 获取 PDF 文档（会话内缓存，避免重复下载）
+async function fetchPdfDoc(company, year) {
+  const key = `${company}_${year}`;
+  if (shotPdfCache.has(key)) return shotPdfCache.get(key);
+  const resp = await fetch(`/api/download?company=${encodeURIComponent(company)}&year=${encodeURIComponent(year)}&dl=1`);
+  if (!resp.ok) throw new Error(`PDF 下载失败 HTTP ${resp.status}`);
+  const buf = await resp.arrayBuffer();
+  const pdfjs = await loadPdfJs();
+  const doc = await pdfjs.getDocument({ data: buf }).promise;
+  shotPdfCache.set(key, doc);
+  return doc;
+}
+
+// 行名规范化（与后端 normRowName 一致）：去序数/减/其中/加 前缀、去空白标点
+function normShotName(s) {
+  return String(s || '')
+    .replace(/^[一二三四五六七八九十]+[、,，]?/, '')
+    .replace(/^减[:：]?/, '')
+    .replace(/^其中[:：]?/, '')
+    .replace(/^加[:：]?/, '')
+    .replace(/[\s，,、()（）]/g, '');
+}
+
+// 全文检索指标行：逐页 getTextContent，命中文字按 y 聚类（同一表格行），
+// 并把该行全部文字项（含数值列）纳入 bbox —— 截图才能同时露出指标中文与数字
+async function searchIndicatorInPdf(doc, query) {
+  const q = normShotName(query);
+  if (!q) throw new Error('指标关键词为空');
+  const results = []; // { page, groups: [{ y, text, bbox }] }
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const allItems = [];
+    const matched = []; // 命中指标名的 item
+    for (const it of content.items) {
+      if (typeof it.str !== 'string') continue;
+      allItems.push(it);
+      const s = normShotName(it.str);
+      if (!s || s.length < 2) continue;
+      // 匹配规则：完全一致 / 行名以指标名开头（去前缀后）/ 长指标名包含较短行名（防 pdf 拆词，至少3字）
+      if (s === q || (s.length >= q.length && s.startsWith(q)) || (q.length >= 4 && s.length >= 3 && q.startsWith(s))) {
+        matched.push(it);
+      }
+    }
+    if (!matched.length) continue;
+    // 按匹配项的 y 聚类（同一行 y 差 < 6pt），并把同行的全部 item（数值列）并入
+    const groups = [];
+    for (const it of matched) {
+      const y = it.transform[5];
+      let g = groups.find(g => Math.abs(g.y - y) < 6);
+      if (g) g.items.push(it);
+      else groups.push({ y, items: [it] });
+    }
+    for (const g of groups) {
+      for (const it of allItems) {
+        if (Math.abs(it.transform[5] - g.y) < 6 && !g.items.includes(it)) g.items.push(it);
+      }
+    }
+    groups.sort((a, b) => b.y - a.y); // 页内从上到下
+    results.push({
+      page: p,
+      groups: groups.map(g => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const it of g.items) {
+          const x = it.transform[4], y = it.transform[5];
+          minX = Math.min(minX, x); minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x + it.width); maxY = Math.max(maxY, y + it.height);
+        }
+        return {
+          y: g.y,
+          text: g.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').slice(0, 200),
+          bbox: { minX, minY, maxX, maxY }
+        };
+      })
+    });
+  }
+  return results;
+}
+
+// 渲染指定页并裁剪 bbox 区域 → { dataUrl, width, height }（canvas 像素）
+async function cropPageRegion(doc, pageNum, bbox, opts = {}) {
+  const { scale = 2, padX = 50, padTop = 28, padBottom = 40 } = opts;
+  const page = await doc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  // PDF 用户空间 → canvas 像素（viewport.transform 为 DOMMatrix [a,b,c,d,e,f]）
+  const T = viewport.transform;
+  const toPx = (x, y) => [T[0] * x + T[2] * y + T[4], T[1] * x + T[3] * y + T[5]];
+  let [x0, y0] = toPx(bbox.minX, bbox.minY);
+  let [x1, y1] = toPx(bbox.maxX, bbox.maxY);
+  x0 = Math.max(0, x0 - padX); y0 = Math.max(0, y0 - padTop);
+  x1 = Math.min(canvas.width, x1 + padX); y1 = Math.min(canvas.height, y1 + padBottom);
+  const w = Math.floor(x1 - x0), h = Math.floor(y1 - y0);
+  if (w <= 0 || h <= 0) return null;
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const octx = out.getContext('2d');
+  octx.drawImage(canvas, Math.floor(x0), Math.floor(y0), w, h, 0, 0, w, h);
+  return { dataUrl: out.toDataURL('image/png'), width: w, height: h };
+}
+
+// 数据库当前值对照（按公司/报告期/指标编号或名称）
+function collectDbValues(company, year, code, name) {
+  const rows = RAW_DATA.filter(r =>
+    r['公司名称'] === company && r['报告期'] === year &&
+    (code ? r['指标编号'] === code : r['指标名称'] === name));
+  if (!rows.length) return null;
+  const CUR = ['本期', '本期末', '期末'];
+  const PREV = ['上期', '本期初', '期初', '上期初', '上期末'];
+  const fmt = (v) => (v === null || v === undefined || v === '') ? null : v;
+  return rows.map(r => ({
+    期间: r['期间'] || '',
+    值: fmt(r['数值-换算']),
+    披露: fmt(r['数值-披露']),
+    单位: r['计量单位-换算'] || '亿元',
+    来源表: r['来源表'] || '',
+    期类: CUR.includes(r['期间']) ? 'cur' : (PREV.includes(r['期间']) ? 'prev' : '')
+  }));
+}
+
+// 解析来源表页码区间（存量/新版格式："…（P93-P94）" / "…（P93）"）
+function parseSrcPages(src) {
+  const s = String(src || '');
+  let m = s.match(/[（(]\s*P\s*(\d+)\s*[-~至]\s*P?\s*(\d+)\s*[）)]/i);
+  if (m) return [parseInt(m[1]), parseInt(m[2])];
+  m = s.match(/[（(]\s*P\s*(\d+)\s*[）)]/i);
+  if (m) return [parseInt(m[1]), parseInt(m[1])];
+  return null;
+}
+
+// 指标截图检索主流程
+async function runShotSearch() {
+  const company = shotPicker ? shotPicker.value : '';
+  const year = document.getElementById('shotYear').value;
+  const indRaw = document.getElementById('shotIndicator').value.trim();
+  const period = document.getElementById('shotPeriod').value;
+  const status = document.getElementById('shotStatus');
+  const resultsEl = document.getElementById('shotResults');
+  const setStatus = (html, cls) => { status.innerHTML = html; status.className = 'dl-ops-status' + (cls ? ' ' + cls : ''); };
+  if (!company) { setStatus('请选择公司（输入简称/全称后从列表点选）', 'err'); return; }
+  if (!indRaw) { setStatus('请输入指标名称或代码（如 B01 / 保险服务收入）', 'err'); return; }
+  // 解析指标输入：代码（B01）→ 指标名称；名称直接使用
+  const codeMatch = indRaw.match(/^([A-Za-z]\d{2,3})$/);
+  const indCode = codeMatch ? codeMatch[1].toUpperCase() : '';
+  const indName = indCode
+    ? (TEMPLATE_163.find(r => r[5] === indCode) || {})[6] || indCode
+    : indRaw;
+  resultsEl.innerHTML = '';
+  setStatus(`正在下载 ${company} ${year} 的 PDF（首次约数秒，之后自动缓存）…`);
+  try {
+    const doc = await fetchPdfDoc(company, year);
+    setStatus(`PDF 已加载（共 ${doc.numPages} 页），正在全文检索「${indName}」…`);
+    // 数据库值对照（含来源表页码区间解析）
+    const dbVals = collectDbValues(company, year, indCode, indName);
+    const srcTable = dbVals && dbVals[0] ? dbVals[0].来源表 : '';
+    const srcPages = parseSrcPages(srcTable);
+    let hits = await searchIndicatorInPdf(doc, indName);
+    // 优先展示来源表页码区间内的命中（表格主区域），区间外命中补充在后
+    let srcRangeNote = '';
+    if (srcPages) {
+      const [ps, pe] = srcPages;
+      const inRange = hits.filter(h => h.page >= ps && h.page <= pe);
+      const outRange = hits.filter(h => h.page < ps || h.page > pe);
+      if (inRange.length) {
+        hits = [...inRange, ...outRange];
+        srcRangeNote = `优先展示来源表页码（PDF 第 ${ps}-${pe} 页）内命中；`;
+      }
+    }
+    if (!hits.length) {
+      setStatus(`未在 PDF 中找到「${indName}」。可能原因：① 指标名称在年报中写法不同（可尝试输入更短的关键词）；② 该指标未披露。`, 'err');
+      return;
+    }
+    // 展示数据库值（按期间过滤）
+    const dbFiltered = period ? (dbVals || []).filter(v => v.期间.includes(period)) : (dbVals || []);
+    const dbHtml = dbFiltered.length
+      ? dbFiltered.map(v => `${v.期间} ${v.值} ${v.单位}`).join('；')
+      : ((dbVals || []).length ? `所选期间无对应值（全部：${dbVals.map(v => `${v.期间} ${v.值} ${v.单位}`).join('；')}）` : '数据库中暂无该公司该指标的记录');
+    // 渲染截图卡片（最多 8 页 × 每页 3 行，避免年报多次出现时刷屏）
+    const MAX_PAGES = 8, MAX_GROUPS = 3;
+    const shown = hits.slice(0, MAX_PAGES);
+    let cardHtml = '';
+    let cropCount = 0;
+    for (const h of shown) {
+      for (const g of h.groups.slice(0, MAX_GROUPS)) {
+        const crop = await cropPageRegion(doc, h.page, g.bbox);
+        if (!crop) continue;
+        cropCount++;
+        const fname = `${company}_${year}_p${h.page}${indCode ? '_' + indCode : ''}.png`;
+        cardHtml += `
+          <div class="shot-card">
+            <div class="shot-card-head">
+              <span class="shot-page-tag">📄 PDF 第 ${h.page} 页</span>
+              <span class="shot-hit-text" title="${g.text}">命中：${g.text}</span>
+            </div>
+            <div class="shot-card-body"><img src="${crop.dataUrl}" alt="PDF p${h.page} 截图"></div>
+            <div class="shot-card-foot">
+              <span>数据库提取值：${dbHtml}</span>
+              <a class="dl-link" download="${fname}" href="${crop.dataUrl}" target="_blank" rel="noopener">下载截图</a>
+            </div>
+          </div>`;
+      }
+    }
+    const totalHits = hits.reduce((n, h) => n + h.groups.length, 0);
+    resultsEl.innerHTML = `
+      <div style="margin-top:8px;font-size:12px;color:var(--c-text-secondary);">
+        共命中 <b>${totalHits}</b> 处（${hits.length} 页），展示前 ${Math.min(totalHits, MAX_PAGES * MAX_GROUPS)} 处。
+        ${srcRangeNote}${srcTable ? `来源表：<b>${srcTable}</b>` : ''}${period ? ` · 期间：${period}` : ''}
+        <button class="btn-apply" id="btnShotClear" style="width:auto;padding:3px 10px;font-size:11px;margin-left:8px;">清空结果</button>
+      </div>
+      ${cardHtml}`;
+    document.getElementById('btnShotClear')?.addEventListener('click', () => { resultsEl.innerHTML = ''; setStatus('', ''); });
+    setStatus(`检索完成：共展示 ${cropCount} 张截图。截图来自报告 PDF 原文，请与「数据库提取值」对照核对。`, 'ok');
+  } catch (e) {
+    setStatus('检索失败：' + e.message + '（请确认已到「年报下载」页下载/上传该 PDF）', 'err');
+  }
+}
+
+// 截图检索面板初始化
+function initShotPanel() {
+  shotPicker = createCompanyPicker('shotCompanyInput', 'shotCompanyVal', 'shotCompanyList');
+  const years = REPORT_PERIODS.length ? REPORT_PERIODS : ['2025年度'];
+  const yrSel = document.getElementById('shotYear');
+  yrSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  // 指标 datalist（81 个指标编号+名称，从模板去重）
+  const indSet = new Map();
+  (TEMPLATE_163 || []).forEach(r => { if (r[5] && !indSet.has(r[5])) indSet.set(r[5], r[6]); });
+  document.getElementById('shotIndicatorList').innerHTML = [...indSet]
+    .map(([c, n]) => `<option value="${c}" label="${c} ${n}"></option>`).join('');
+  document.getElementById('btnShotSearch').addEventListener('click', runShotSearch);
+  // 回车触发检索
+  document.getElementById('shotIndicator').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); runShotSearch(); }
+  });
+}
+
 const EXTRACT_STAGES = [
   {key: 'pdf', label: 'PDF已备', cls: 'prog-doing'},
   {key: 'text', label: '文本已提取', cls: 'prog-doing'},
@@ -4102,6 +4483,15 @@ function initExtractView() {
       document.getElementById('extTemplatePanel').style.display = isTpl ? '' : 'none';
       document.getElementById('extProgressPanel').style.display = isTpl ? 'none' : '';
     });
+  });
+  // 指标模板折叠/展开（默认收起，铺开展示必要性不强）
+  const tplBody = document.getElementById('extTplBody');
+  const tplHead = document.getElementById('extTplHead');
+  tplHead.addEventListener('click', () => {
+    const open = tplBody.style.display !== 'none';
+    tplBody.style.display = open ? 'none' : '';
+    tplHead.classList.toggle('open', !open);
+    document.getElementById('extTplArrow').textContent = open ? '▸ 展开' : '▾ 收起';
   });
   document.getElementById('btnCopyPrompt').addEventListener('click', () => {
     const year = String(REPORT_PERIODS[REPORT_PERIODS.length - 1] || '2025年度').match(/(\d{4})/);
@@ -4172,6 +4562,108 @@ Step6 全程遵守期间枚举规范（仅 本期/上期/本期初/本期末/上
     }
     e.target.value = '';
   });
+
+  // ===== 已就绪 PDF 文件面板（联动年报下载页已下载记录）=====
+  document.getElementById('btnExtPdfRefresh').addEventListener('click', () => renderExtPdfTable(true));
+  document.getElementById('extPdfTable').addEventListener('click', e => {
+    const row = e.target.closest('tr[data-company]');
+    if (!row) return;
+    const short = row.dataset.company;   // 存储 key 中的公司名（简称或全称）
+    const year = row.dataset.year;       // 如 "2025年度"
+    const full = findCompany92(short);
+    if (full) {
+      extPicker.select(full);            // 联动填充公司（含类型）
+    } else {
+      extPicker.setDisplay(short + ' · ' + short);
+    }
+    // 联动报告期：选项不存在则动态加入并选中
+    const yrSel = document.getElementById('extTargetYear');
+    if (![...yrSel.options].some(o => o.value === year)) {
+      const opt = document.createElement('option');
+      opt.value = year; opt.textContent = year;
+      yrSel.appendChild(opt);
+    }
+    yrSel.value = year;
+    // 高亮选中行
+    document.querySelectorAll('#extPdfTable tr[data-company]').forEach(r => r.style.background = '');
+    row.style.background = 'var(--c-navy-light)';
+    showToast(`已填入：${short} · ${year}，点击「AI 提取入库」开始提取`);
+  });
+
+  // 指标截图检索面板
+  initShotPanel();
+}
+
+// 根据简称或全称查找 92 家公司列表项（已就绪 PDF 联动用）
+function findCompany92(name) {
+  if (!name) return null;
+  return COMPANIES_92.find(c => c.full_name === name || (SHORT_NAME_MAP[c.full_name] || c.full_name) === name) || null;
+}
+
+// 拉取已下载 PDF 列表（云：/api/download?list=1 一次拉取 + 60s 缓存；静态：localStorage）
+// 返回 [{company, short, year, source, size}]，company 为全称（可空）、short 为存储 key 名
+async function fetchPdfList(force = false) {
+  const localStore = JSON.parse(localStorage.getItem('dl_pdf_status') || '{}');
+  const localRecords = Object.keys(localStore).filter(k => localStore[k]).map(k => {
+    const idx = k.lastIndexOf('_');
+    return { company: idx > 0 ? k.slice(0, idx) : k, short: idx > 0 ? k.slice(0, idx) : k, year: idx > 0 ? k.slice(idx + 1) : '', source: 'local', size: null };
+  });
+  if (!isCloudMode) return { records: localRecords, isCloud: false };
+  const cacheKey = 'dl_pdf_list_cache';
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && Date.now() - cached.ts < 60 * 1000) return { records: cached.records, isCloud: true };
+    } catch (e) {}
+  }
+  try {
+    const { resp, data } = await apiFetch('/api/download?list=1');
+    if (resp.ok && data && Array.isArray(data.list)) {
+      const records = data.list.map(f => {
+        const full = findCompany92(f.company);
+        return { company: full ? full.full_name : f.company, short: f.company, year: f.year, source: 'cloud', size: null };
+      });
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), records }));
+      return { records, isCloud: true };
+    }
+    return { records: localRecords, isCloud: true, error: (data && data.error) || '接口异常' };
+  } catch (e) {
+    return { records: localRecords, isCloud: true, error: e.message };
+  }
+}
+
+// 渲染智能提取页「已就绪 PDF 文件」表格
+async function renderExtPdfTable(force = false) {
+  const panel = document.getElementById('extPdfPanel');
+  const table = document.getElementById('extPdfTable');
+  const count = document.getElementById('extPdfCount');
+  if (!panel || !table) return;
+  table.innerHTML = '<div style="padding:16px;text-align:center;color:var(--c-text-muted);font-size:12px;">正在探测已下载 PDF…</div>';
+  const { records, isCloud, error } = await fetchPdfList(force);
+  const modeTip = !isCloud ? '<div style="width:100%;font-size:11px;color:#8A6A2E;margin-bottom:6px;">当前为静态模式（本地预览），仅显示本地记录；AI 提取需部署到 Cloudflare 后可用。</div>' : '';
+  if (!records.length) {
+    table.innerHTML = `<div style="padding:16px;text-align:center;color:var(--c-text-muted);font-size:12px;">暂无${isCloud ? '云端' : '本地'}已下载 PDF。<br/><span style="font-size:11px;color:#8A6A2E;">请先到「年报下载」页下载或上传 PDF${error ? '（探测失败：' + error + '）' : ''}</span></div>`;
+    count.textContent = '';
+    return;
+  }
+  const rows = records.map(r => `
+    <tr data-company="${r.short}" data-year="${r.year}" style="cursor:pointer;">
+      <td style="text-align:left;">${r.company || r.short}</td>
+      <td style="text-align:center;white-space:nowrap;">${r.year}</td>
+      <td style="text-align:center;"><span class="std-tag std-new">${r.source === 'local' ? '本地记录' : '云端存储'}</span></td>
+      <td style="text-align:center;color:var(--c-navy);font-size:11px;">点选 →</td>
+    </tr>
+  `).join('');
+  table.innerHTML = `
+    ${modeTip}
+    <div class="data-table-wrap" style="max-height:300px;">
+      <table class="data-table db-table" style="min-width:480px;">
+        <thead><tr><th>公司名称</th><th style="width:110px;">年度</th><th style="width:100px;">来源</th><th style="width:70px;">操作</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+  count.textContent = `共 ${records.length} 个文件（${isCloud ? '云端' : '本地'}）`;
 }
 
 // ============== 数据库管理（云模式）：范围删除 + 上传导入 ==============
@@ -4249,7 +4741,7 @@ function renderExtractView() {
   });
   const tplKeys = Object.keys(reports).sort();
   document.getElementById('extTplSummary').innerHTML =
-    `163行指标模板 · ${tplKeys.length} 张报表（${tplKeys.map(k => `${k} ${reports[k].name} ${reports[k].count}行`).join('；')}）· 期间枚举规范：本期/上期/本期初/本期末/上期初/上期末` +
+    `指标模板 · ${tplKeys.length} 张报表（${tplKeys.map(k => `${k} ${reports[k].name} ${reports[k].count}行`).join('；')}）· 期间枚举规范：本期/上期/本期初/本期末/上期初/上期末` +
     '<br/>模板示例公司：' + (tpl[0] ? tpl[0][1] : '') + ' ' + (tpl[0] ? tpl[0][2] : '');
 
   // 模板表格（按报表分组）
@@ -4293,6 +4785,14 @@ function renderExtractView() {
       </table>
     </div>
   `;
+
+  // 已就绪 PDF 文件面板（联动年报下载已下载记录；静态模式也显示本地记录）
+  const pdfPanel = document.getElementById('extPdfPanel');
+  if (pdfPanel) pdfPanel.style.display = '';
+  renderExtPdfTable();
+  // 指标截图检索面板
+  const shotPanel = document.getElementById('shotPanel');
+  if (shotPanel) shotPanel.style.display = '';
 }
 
 // ============== 折现率 View（复刻 v2.0） ==============
