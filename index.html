@@ -231,6 +231,21 @@ body {
 .nav-sub:hover { color: var(--sidebar-text); }
 .nav-sub.active { color: var(--c-gold); }
 
+/* 可展开子目录组：默认收起，点击箭头或进入对应页时展开 */
+.nav-group .nav-subs { display: none; }
+.nav-group.open .nav-subs { display: block; }
+.nav-toggle {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: transform 0.2s;
+}
+.nav-toggle:hover { color: var(--sidebar-text); background: var(--sidebar-hover); }
+.nav-group.open .nav-toggle { transform: rotate(90deg); color: var(--c-gold); }
+
 /* ===== Main Area ===== */
 .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
@@ -811,6 +826,8 @@ body {
   color: var(--c-text-muted);
   margin-bottom: 10px;
 }
+.db-info-row { display: flex; align-items: center; gap: 8px; }
+.db-mgmt-title { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; color: var(--c-navy); margin-bottom: 10px; }
 .db-card {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
@@ -1261,7 +1278,7 @@ body {
 @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
   .sidebar { width: 64px; }
-  .sidebar-brand .sub, .nav-item span, .nav-sub { display: none; }
+  .sidebar-brand .sub, .nav-item span, .nav-sub, .nav-toggle { display: none; }
   .company-popover { width: 90vw; }
 }
 </style>
@@ -1285,18 +1302,30 @@ body {
       <div class="nav-item" id="navExtract">
         <i class="icon fa-solid fa-wand-magic-sparkles"></i><span>智能提取</span>
       </div>
-      <div class="nav-item" id="navDatabase">
-        <i class="icon fa-solid fa-database"></i><span>数据库</span>
+      <div class="nav-group" data-group="database">
+        <div class="nav-item" id="navDatabase">
+          <i class="icon fa-solid fa-database"></i><span>数据库</span>
+          <i class="nav-toggle fa-solid fa-chevron-right" data-toggle="database" title="展开/收起子目录"></i>
+        </div>
+        <div class="nav-subs">
+          <div class="nav-sub" data-sub="db-browse"><span>数据浏览</span></div>
+          <div class="nav-sub" data-sub="db-mgmt"><span>数据管理</span></div>
+        </div>
       </div>
-      <div class="nav-item active" id="navAnalysis">
-        <i class="icon fa-solid fa-chart-line"></i><span>数据分析</span>
+      <div class="nav-group" data-group="analysis">
+        <div class="nav-item active" id="navAnalysis">
+          <i class="icon fa-solid fa-chart-line"></i><span>数据分析</span>
+          <i class="nav-toggle fa-solid fa-chevron-right" data-toggle="analysis" title="展开/收起子目录"></i>
+        </div>
+        <div class="nav-subs">
+          <div class="nav-sub active" data-sub="key-ops"><span>关键经营指标</span></div>
+          <div class="nav-sub" data-sub="profit-analysis"><span>利润分析</span></div>
+          <div class="nav-sub" data-sub="insurance-service"><span>保险服务业绩</span></div>
+          <div class="nav-sub" data-sub="investment-service"><span>投资服务业绩</span></div>
+          <div class="nav-sub" data-sub="key-monitor"><span>关键监测指标</span></div>
+          <div class="nav-sub" data-sub="disclosure"><span>其他披露信息</span></div>
+        </div>
       </div>
-      <div class="nav-sub active" data-sub="key-ops"><span>关键经营指标</span></div>
-      <div class="nav-sub" data-sub="profit-analysis"><span>利润分析</span></div>
-      <div class="nav-sub" data-sub="insurance-service"><span>保险服务业绩</span></div>
-      <div class="nav-sub" data-sub="investment-service"><span>投资服务业绩</span></div>
-      <div class="nav-sub" data-sub="key-monitor"><span>关键监测指标</span></div>
-      <div class="nav-sub" data-sub="disclosure"><span>其他披露信息</span></div>
       <div class="nav-item" id="navDiscount">
         <i class="icon fa-solid fa-percent"></i><span>折现率</span>
       </div>
@@ -1469,7 +1498,12 @@ body {
         <span class="tag"><span class="dot dot-std"></span> 标准化为负值（已符合）</span>
         <span class="tag"><span class="dot dot-warn"></span> 需标准化（当前为正，应转为负值）</span>
       </div>
-      <div class="db-info" id="dbInfo"></div>
+      <div class="db-info-row">
+        <div class="db-info" id="dbInfo"></div>
+        <button class="btn-reset" id="btnJumpDbMgmt" title="数据较多时快速跳到下方「数据管理」区" style="margin-left:auto;padding:4px 10px;font-size:11px;">
+          ⤵ 数据管理
+        </button>
+      </div>
       <div class="db-card">
         <div id="dbTableContainer"></div>
       </div>
@@ -1479,6 +1513,7 @@ body {
         <div class="db-mgmt-title">
           <i class="fa-solid fa-sliders" style="font-size:12px;"></i> 数据管理
           <span style="font-weight:400;font-size:11px;color:var(--c-text-muted);margin-left:8px;">（需部署到 Cloudflare；删除/上传后数据库页与分析图表立即生效）</span>
+          <button class="btn-reset" id="btnBackTop" style="margin-left:auto;padding:4px 10px;font-size:11px;" title="回到数据库页顶部">⤴ 回到顶部</button>
         </div>
         <div class="db-mgmt-row">
           <div class="db-mgmt-box">
@@ -1492,6 +1527,19 @@ body {
               <input type="text" id="mgmtCodes" placeholder="如 D10 / D10,D07" style="width:110px;">
             </div>
             <button class="btn-danger cloud-only" id="btnDeleteData">删除所选数据</button>
+          </div>
+          <div class="db-mgmt-box">
+            <div class="db-mgmt-box-title">导出数据（当前筛选结果）</div>
+            <div class="db-mgmt-fields">
+              <span style="font-size:11px;color:var(--c-text-muted);line-height:1.5;">
+                导出数据库页当前筛选后的全部行（含 17 列完整字段）。
+                JSON 格式可直接用于「上传导入」增量合并；CSV 可用 Excel/WPS 打开。
+              </span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <button class="btn-apply cloud-only" id="btnExportCsv" style="width:auto;padding:5px 14px;font-size:12px;">导出 CSV</button>
+              <button class="btn-apply cloud-only" id="btnExportJson" style="width:auto;padding:5px 14px;font-size:12px;background:var(--c-bg, #2B4C6F);">导出 JSON</button>
+            </div>
           </div>
           <div class="db-mgmt-box">
             <div class="db-mgmt-box-title">上传导入（JSON 增量合并，支持数据库页导出格式）</div>
@@ -2054,8 +2102,13 @@ function switchView(view) {
   document.getElementById('extractView').style.display = isExtract ? 'block' : 'none';
   document.getElementById('discountView').style.display = isDiscount ? 'block' : 'none';
   document.getElementById('askView').style.display = isAsk ? 'block' : 'none';
-  // 子页面导航只在数据分析页显示
-  document.querySelectorAll('.nav-sub').forEach(n => n.style.display = isAnalysis ? '' : 'none');
+  // 子页面导航：按组控制（进入页面自动展开对应子目录并收起其他组）
+  document.querySelectorAll('.nav-group').forEach(g => {
+    const grp = g.dataset.group;
+    if (grp !== 'analysis' && grp !== 'database') return;
+    const active = (grp === 'analysis' && isAnalysis) || (grp === 'database' && isDb);
+    g.classList.toggle('open', active);
+  });
   document.getElementById('navOverview').classList.toggle('active', isOverview);
   document.getElementById('navDownload').classList.toggle('active', isDownload);
   document.getElementById('navExtract').classList.toggle('active', isExtract);
@@ -2265,10 +2318,30 @@ function initSidebar() {
   document.getElementById('navAnalysis').addEventListener('click', () => switchView('analysis'));
   document.getElementById('navDiscount').addEventListener('click', () => switchView('discount'));
   document.getElementById('navAsk').addEventListener('click', () => switchView('ask'));
+  document.querySelectorAll('.nav-toggle').forEach(tg => {
+    tg.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const grp = tg.dataset.toggle;
+      const groupEl = document.querySelector(`.nav-group[data-group="${grp}"]`);
+      if (groupEl) groupEl.classList.toggle('open');
+    });
+  });
   document.querySelectorAll('.nav-sub').forEach(el => {
     el.addEventListener('click', () => {
+      const sub = el.dataset.sub;
+      // 数据库子目录：数据浏览/数据管理 → 切到数据库页并滚动到对应位置
+      if (sub === 'db-browse' || sub === 'db-mgmt') {
+        switchView('database');
+        document.querySelectorAll('.nav-sub').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+        setTimeout(() => {
+          const target = sub === 'db-mgmt' ? document.getElementById('dbMgmt') : document.getElementById('dbView');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+        return;
+      }
       switchView('analysis');
-      currentSubPage = el.dataset.sub;
+      currentSubPage = sub;
       document.querySelectorAll('.nav-sub').forEach(n => n.classList.remove('active'));
       el.classList.add('active');
       buildChartCards();
@@ -3462,6 +3535,8 @@ function renderCharts() {
 
 // ============== Database View ==============
 const DB_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '期间', '数值-换算', '数值-披露', '来源表', '标准化'];
+// 导出用完整 17 列（数据对象全字段，JSON 回传「上传导入」可无损增量覆盖）
+const EXPORT_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '关键词', '期间', '计量单位-披露', '计量单位-换算', '数值-披露', '数值-换算', '来源表', '行序号', '列序号'];
 
 function initDbFilters() {
   const companySelect = document.getElementById('dbCompanyFilter');
@@ -3519,6 +3594,8 @@ function renderDatabase() {
   });
 
   document.getElementById('dbInfo').textContent = `共 ${rows.length} 行数据（当前数据库：37家公司 · ${RAW_DATA.length}行 · 81个指标）`;
+  // 供导出功能复用（当前筛选结果）
+  window.__dbFilteredRows = rows;
 
   if (rows.length === 0) {
     document.getElementById('dbTableContainer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--c-text-muted);">没有匹配的数据</div>';
@@ -4807,6 +4884,51 @@ function initDbMgmt() {
     }
     document.getElementById('mgmtFile').value = '';
   });
+
+  // 数据库页内快速定位书签：跳数据管理 / 回到顶部
+  const jmpBtn = document.getElementById('btnJumpDbMgmt');
+  if (jmpBtn) jmpBtn.addEventListener('click', () => {
+    const el = document.getElementById('dbMgmt');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  const backBtn = document.getElementById('btnBackTop');
+  if (backBtn) backBtn.addEventListener('click', () => {
+    const el = document.getElementById('dbView');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // 导出：CSV / JSON（基于数据库页当前筛选结果 window.__dbFilteredRows；完整 17 列）
+  const dbExport = (fmt) => {
+    const rows = window.__dbFilteredRows || RAW_DATA;
+    if (!rows.length) { setDbMgmtStatus('当前筛选结果为空，无可导出数据', 'err'); return; }
+    const cols = EXPORT_COLUMNS;
+    let content, mime, ext;
+    if (fmt === 'csv') {
+      // 带 BOM 保证 Excel 中文不乱码；逗号分隔，字段含逗号/引号/换行时用双引号包裹
+      const esc = v => {
+        const s = (v === null || v === undefined) ? '' : String(v);
+        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      content = '\uFEFF' + [cols.map(esc).join(',')]
+        .concat(rows.map(r => cols.map(c => esc(r[c])).join(',')))
+        .join('\r\n');
+      mime = 'text/csv;charset=utf-8;'; ext = 'csv';
+    } else {
+      content = JSON.stringify({ rows }, null, 2);
+      mime = 'application/json;charset=utf-8;'; ext = 'json';
+    }
+    const ts = new Date().toISOString().slice(0, 19).replace(/[-T:]/g, '').slice(0, 14);
+    const blob = new Blob([content], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `数据库导出_${ts}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+    setDbMgmtStatus(`已导出 ${rows.length} 行（${ext.toUpperCase()}，数据库页当前筛选结果）`, 'ok');
+  };
+  document.getElementById('btnExportCsv').addEventListener('click', () => dbExport('csv'));
+  document.getElementById('btnExportJson').addEventListener('click', () => dbExport('json'));
 }
 
 function setDbMgmtStatus(html, cls) {
