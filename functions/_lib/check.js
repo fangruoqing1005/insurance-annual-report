@@ -84,6 +84,53 @@ export function runChecks(rows) {
     }
   }
 
+  // 4) LC调节-PAA：C10期初LC + C11计息 + C12亏损确认转回 + C13摊销 = C14期末LC（本期）
+  {
+    const c10 = agg['C10']?.['本期'], c11 = agg['C11']?.['本期'], c12 = agg['C12']?.['本期'],
+      c13 = agg['C13']?.['本期'], c14 = agg['C14']?.['本期'];
+    if (c10 !== undefined && c11 !== undefined && c12 !== undefined && c13 !== undefined && c14 !== undefined) {
+      const sum = c10 + c11 + c12 + c13;
+      const diff = Math.abs(sum - c14);
+      checks.push({
+        name: 'LC调节-PAA', pass: diff <= EPS,
+        detail: `C10期初LC ${fmt(c10)} + C11计息 ${fmt(c11)} + C12确认转回 ${fmt(c12)} + C13摊销 ${fmt(c13)} = ${fmt(sum)}，C14期末LC ${fmt(c14)}，差 ${fmt(diff)}`,
+        values: { C10: c10, C11: c11, C12: c12, C13: c13, C14: c14 }
+      });
+    } else {
+      checks.push({ name: 'LC调节-PAA', pass: null, detail: 'C10-C14 本期数据缺失，跳过' });
+    }
+  }
+
+  // 5) E系列勾稽：E01=E02+E03、E04=E05+E06、E07=E08+E09（本期）
+  [['E01', 'E02', 'E03'], ['E04', 'E05', 'E06'], ['E07', 'E08', 'E09']].forEach(([sumCode, aCode, bCode]) => {
+    const sum = agg[sumCode]?.['本期'], a = agg[aCode]?.['本期'], b = agg[bCode]?.['本期'];
+    if (sum !== undefined && a !== undefined && b !== undefined) {
+      const diff = Math.abs(sum - (a + b));
+      checks.push({
+        name: `E勾稽-${sumCode}`, pass: diff <= EPS,
+        detail: `${sumCode}合计 ${fmt(sum)} vs ${aCode} ${fmt(a)} + ${bCode} ${fmt(b)} = ${fmt(a + b)}，差 ${fmt(diff)}`,
+        values: { sum: sum, a: a, b: b }
+      });
+    } else {
+      checks.push({ name: `E勾稽-${sumCode}`, pass: null, detail: `${sumCode}/${aCode}/${bCode} 本期数据缺失，跳过` });
+    }
+  });
+
+  // 6) T08非履约费用勾稽：H03 = |B14|（本期）
+  {
+    const h3 = agg['H03']?.['本期'], b14 = agg['B14']?.['本期'];
+    if (h3 !== undefined && b14 !== undefined) {
+      const diff = Math.abs(h3 - Math.abs(b14));
+      checks.push({
+        name: 'T08勾稽', pass: diff <= EPS,
+        detail: `H03非履约费用 ${fmt(h3)} vs |B14业务及管理费| ${fmt(Math.abs(b14))}，差 ${fmt(diff)}`,
+        values: { H03: h3, B14: b14 }
+      });
+    } else {
+      checks.push({ name: 'T08勾稽', pass: null, detail: 'H03/B14 本期数据缺失，跳过' });
+    }
+  }
+
   return checks;
 }
 

@@ -61,6 +61,7 @@ export async function onRequest({ request, env }) {
       const batchCodes = tables ? tplCodes.filter(t => tables.includes(t)) : tplCodes;
       if (!batchCodes.length) return fail('tables 参数未匹配到模板中的报表（如 T01-T10）');
       const allRowsByTable = {};
+      const allItemsByTable = {};
       const tableNotes = [];
       for (const tCode of batchCodes) {
         const inds = template.filter(r => r[3] === tCode);
@@ -73,38 +74,76 @@ export async function onRequest({ request, env }) {
         // 逐页提取：优先只用主表首页（表头页）；若指标覆盖不足再向后扩展，避免混入后续页的公司报表
         const uniqueInds = new Set(inds.map(r => r[5])).size;
         const pageResults = [];
+        const itemsAcc = {}; // 模式一：模型按编号输出的累积（靠后页优先）
         let matchedRows = [];
         let reached = null;
+        let prevCovered = -1;
         for (let p = loc.startPage; p <= loc.endPage; p++) {
           // 优先使用前端上传的坐标文本（零后端 CPU）；否则后端提取（兜底）
           const pageSlice = coordPages && coordPages[p - 1] != null
             ? coordPages[p - 1]
             : await extractTableText(pdfData, p, p);
-          if (pageSlice.length < 60) continue; // 空白页跳过
+          if (pageSlice.length < 60) {
+            tableNotes.push(`${tCode} p${p}: 文本过短(<60)跳过`);
+            continue; // 空白页跳过
+          }
           const pageRes = await extractTable(env, {
             tCode, tableName, indicators: inds, sliceText: pageSlice, companyName: company, year
           });
+          const itemsKeys = Object.keys(pageRes.items || {});
+          const firstItems = itemsKeys.slice(0, 6).map(k => `${k}(${pageRes.items[k]['本期'] ?? '?'})`).join('、');
+          tableNotes.push(`${tCode} p${p}: title="${pageRes._title}" items=${itemsKeys.length} 首=${firstItems || '（无）'} rows=${(pageRes.rows || []).length}`);
+          // 模式一：合并 items（同编号靠后页非 null 优先）
+          for (const [code, it] of Object.entries(pageRes.items || {})) {
+            const prev = itemsAcc[code];
+            itemsAcc[code] = {
+              本期: it['本期'] ?? prev?.['本期'] ?? null,
+              上期: it['上期'] ?? prev?.['上期'] ?? null,
+              披露单位: it['披露单位'] || prev?.['披露单位'] || ''
+            };
+          }
           pageResults.push(pageRes);
           matchedRows = mergePageResults(pageResults, tableName);
           const matched = matchIndicators(inds, matchedRows);
-          const covered = Object.keys(matched).length;
-          // 覆盖 >= 60% 指标即停止扩展（主表页已够），否则继续下一页
-          if (covered >= uniqueInds * 0.6) {
+          const covered = Math.max(Object.keys(matched).length, Object.keys(itemsAcc).length);
+          // 覆盖全部指标即停止；连续两页无新增指标也停止（防无限翻页）
+          if (covered >= uniqueInds) {
             reached = p;
             break;
           }
+          if (covered <= prevCovered && covered > 0) {
+            reached = p;
+            break;
+          }
+          prevCovered = covered;
         }
         allRowsByTable[tCode] = { inds, rows: matchedRows, loc };
-        tableNotes.push(`${tCode}: 用至页 ${reached ?? loc.endPage}，匹配 ${matchedRows.length} 行`);
+        allItemsByTable[tCode] = { inds, items: itemsAcc, loc };
+        tableNotes.push(`${tCode}: 用至页 ${reached ?? loc.endPage}，编号匹配 ${Object.keys(itemsAcc).length}，行匹配 ${matchedRows.length} 行`);
       }
 
-      // 5) 后端确定性匹配指标 + 组装 RAW_DATA 行
+      // 5) 指标匹配 + 组装 RAW_DATA 行
+      // 匹配来源优先级：①模式一 items（模型按编号+来源线索语义提取）②模式二 matchIndicators（行名机械匹配兜底）
       const companyType = (body.companyType || '').trim();
       const rows = [];
       const suspicious = [];
       const matchedCount = {};
-      for (const [tCode, { inds, rows: tableRows, loc }] of Object.entries(allRowsByTable)) {
+      for (const tCode of Object.keys(allItemsByTable)) {
+        const { inds, items, loc } = allItemsByTable[tCode];
+        const { rows: tableRows } = allRowsByTable[tCode] || { rows: [] };
         const matched = matchIndicators(inds, tableRows);
+        // 模式一优先：模型按编号输出的值覆盖机械匹配（AI 语义理解可处理多列表列选择，标记可信）
+        for (const [code, it] of Object.entries(items)) {
+          if (it['本期'] === null && it['上期'] === null) continue;
+          matched[code] = {
+            ...(matched[code] || {}),
+            本期: it['本期'] ?? matched[code]?.['本期'] ?? null,
+            上期: it['上期'] ?? matched[code]?.['上期'] ?? null,
+            披露单位: it['披露单位'] || matched[code]?.['披露单位'] || inds.find(x => x[5] === code)?.[10] || '',
+            _suspicious: false,
+            _aiDirect: true
+          };
+        }
         matchedCount[tCode] = Object.keys(matched).length;
         // 来源表附页码区间（PDF 内部页），供前端「指标截图检索」优先定位；与存量数据格式（…（P93-P94））一致
         const pageSuffix = loc ? `（P${loc.startPage}-P${loc.endPage}）` : '';
@@ -114,18 +153,27 @@ export async function onRequest({ request, env }) {
           const per = PERIOD_ALIAS[r[9]] || r[9]; // 期间归一
           const val = periodVal(ext, per);
           if (val === null || val === undefined) continue;
-          const disp = typeof val === 'number' ? val : (isNaN(Number(val)) ? null : Number(val));
-          const conv = convToYi(disp, ext['披露单位'] || r[10]);
+          // 机械匹配可疑值（行名降级匹配，多列表可能取错列）不入库：宁可缺失不误导，等待模式一或人工核
+          if (ext._suspicious && !ext._aiDirect) {
+            suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: val, 提示: '可疑匹配未入库' });
+            continue;
+          }
+          const isText = typeof val === 'string' && isNaN(Number(val));
+          const disp = isText ? val : (isNaN(Number(val)) ? null : Number(val));
+          const conv = isText ? val : convToYi(disp, ext['披露单位'] || r[10]);
           if (ext._suspicious) {
             suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: conv });
           }
+          // 指标来源/关键词/来源表保留模板线索（PDF 行名、页码），不覆盖为"指标名-期间"
+          const srcText = typeof r[7] === 'string' && r[7].length > 2 ? r[7] : `${r[6]}-${r[9]}`;
+          const kwText = typeof r[8] === 'string' && r[8].length > 2 ? r[8] : `${r[6]}-${r[9]}`;
           rows.push({
             '公司类型': companyType, '公司名称': company, '报告期': year,
             '报表类型': r[3], '报表名称': r[4], '指标编号': code, '指标名称': r[6],
-            '指标来源': `${r[6]}-${r[9]}`, '关键词': `${r[6]}-${r[9]}`,
+            '指标来源': srcText, '关键词': kwText,
             '期间': per, '计量单位-披露': ext['披露单位'] || r[10] || '元', '计量单位-换算': r[11] || '亿元',
             '数值-披露': disp, '数值-换算': conv,
-            '来源表': `${ext['来源'] || `${r[3]} ${r[4]}`}${pageSuffix}`, '行序号': r[15], '列序号': r[16]
+            '来源表': `${ext['来源'] || r[14] || `${r[3]} ${r[4]}`}${pageSuffix}`, '行序号': r[15], '列序号': r[16]
           });
         }
       }
