@@ -146,7 +146,7 @@ ${sliceText}
   });
 
   const parsed = parseJSON(content);
-  const result = { _title: '', items: {}, rows: [] };
+  const result = { _title: '', items: {}, rows: [], raw: String(content).slice(0, 400) };
   // 模式一：items 按编号输出
   if (Array.isArray(parsed.items)) {
     result._title = String(parsed._title || '').trim();

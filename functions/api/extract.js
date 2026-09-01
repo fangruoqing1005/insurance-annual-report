@@ -94,7 +94,7 @@ export async function onRequest({ request, env }) {
           });
           const itemsKeys = Object.keys(pageRes.items || {});
           const firstItems = itemsKeys.slice(0, 6).map(k => `${k}(${pageRes.items[k]['本期'] ?? '?'})`).join('、');
-          tableNotes.push(`${tCode} p${p}: title="${pageRes._title}" items=${itemsKeys.length} 首=${firstItems || '（无）'} rows=${(pageRes.rows || []).length}`);
+          tableNotes.push(`${tCode} p${p}: title="${pageRes._title}" items=${itemsKeys.length} 首=${firstItems || '（无）'} rows=${(pageRes.rows || []).length} raw=${(pageRes.raw || '').replace(/\n/g, ' ').slice(0, 180)}`);
           // 模式一：合并 items（同编号靠后页非 null 优先）
           for (const [code, it] of Object.entries(pageRes.items || {})) {
             const prev = itemsAcc[code];
