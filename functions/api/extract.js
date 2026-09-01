@@ -65,7 +65,9 @@ export async function onRequest({ request, env }) {
       const tableNotes = [];
       for (const tCode of batchCodes) {
         const inds = template.filter(r => r[3] === tCode);
-        const tableName = inds[0]?.[4] || tCode;
+        const tableName = inds[0]?.[4] || tCode; // 入库用报表名（如"M2表"）
+        // AI 判断用真实表名（搜索关键词优先——模型不认"T03/M2表"代号，页面标题是"保险合同负债余额调节表"等）
+        const tableDesc = (TABLE_KEYWORDS[tCode] || [])[0] || tableName;
         const loc = locateTable(fullText0, TABLE_KEYWORDS[tCode] || [tableName]);
         if (!loc) {
           tableNotes.push(`${tCode}: 未定位到关键词，跳过`);
@@ -88,7 +90,7 @@ export async function onRequest({ request, env }) {
             continue; // 空白页跳过
           }
           const pageRes = await extractTable(env, {
-            tCode, tableName, indicators: inds, sliceText: pageSlice, companyName: company, year
+            tCode, tableName: tableDesc, indicators: inds, sliceText: pageSlice, companyName: company, year
           });
           const itemsKeys = Object.keys(pageRes.items || {});
           const firstItems = itemsKeys.slice(0, 6).map(k => `${k}(${pageRes.items[k]['本期'] ?? '?'})`).join('、');
@@ -103,7 +105,7 @@ export async function onRequest({ request, env }) {
             };
           }
           pageResults.push(pageRes);
-          matchedRows = mergePageResults(pageResults, tableName);
+          matchedRows = mergePageResults(pageResults, tableDesc);
           const matched = matchIndicators(inds, matchedRows);
           const covered = Math.max(Object.keys(matched).length, Object.keys(itemsAcc).length);
           // 覆盖全部指标即停止；连续两页无新增指标也停止（防无限翻页）
