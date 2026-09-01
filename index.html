@@ -3881,7 +3881,8 @@ function initDownloadView() {
       const batches = [];
       for (let i = 0; i < tplCodes.length; i += TABLES_BATCH) batches.push(tplCodes.slice(i, i + TABLES_BATCH));
       let totalAdded = 0;
-      const allSusp = [], allChecks = [], batchNotes = [];
+      const allSusp = [], allChecks = [], batchNotes = [], allNotes = [];
+      let totalMatched = 0;
       for (let bi = 0; bi < batches.length; bi++) {
         const batch = batches[bi];
         setExtOps(`正在 AI 提取 ${company} ${year}（批次 ${bi + 1}/${batches.length}：${batch.join(' / ')}），每批预计 1-3 分钟，请耐心等待…`);
@@ -3894,15 +3895,25 @@ function initDownloadView() {
           throw new Error(`批次 ${batch.join('/')} 提取失败：${errDetail}`);
         }
         totalAdded += data.rowsAdded || 0;
+        totalMatched += Object.values(data.matched || {}).reduce((a, b) => a + b, 0);
         allSusp.push(...(data.suspicious || []));
         allChecks.push(...(data.checks || []));
+        allNotes.push(...(data.tableNotes || []));
         batchNotes.push(`批次${bi + 1}(${batch.join('/')}): +${data.rowsAdded || 0}行`);
       }
-      // 3) 汇总显示
+      // 3) 汇总显示（含每表诊断明细与低覆盖警告）
       const checkSummary = allChecks.map(c => c.pass === null ? `${c.name}跳过` : (c.pass ? `${c.name}✓` : `${c.name}✗`)).join(' | ');
       let html = `提取完成：新增 ${totalAdded} 行（${batchNotes.join('；')}），勾稽：${checkSummary || '无'}。`;
+      const zeroNotes = (allNotes || []).filter(n => /匹配 0 行|未定位|文本过短/.test(n));
+      if (zeroNotes.length) {
+        html += `<br/><span class="err">⚠ ${zeroNotes.length} 张报表提取 0 行（${zeroNotes.map(n => n.split(':')[0]).join('、')}），请展开下方明细核查</span>`;
+      }
       if (allSusp.length) html += `<br/><span class="err">⚠ ${allSusp.length} 项行名可疑（${allSusp.map(s => s.code + ':' + s.指标名称).join('、')}），请到数据库页核对</span>`;
       if (allChecks.some(c => c.pass === false)) html += `<br/><span class="err">⚠ 存在未通过的勾稽项，请人工核查</span>`;
+      if (allNotes.length) {
+        html += `<br/><details style="margin-top:6px;"><summary style="cursor:pointer;font-size:11px;color:var(--c-text-muted);">每张表提取明细（${allNotes.length} 条）</summary>
+          <div style="font-size:10px;color:var(--c-text-muted);line-height:1.6;max-height:180px;overflow-y:auto;margin-top:4px;padding:6px;background:rgba(0,0,0,.04);border-radius:4px;">${allNotes.map(n => `<div>${n}</div>`).join('')}</div></details>`;
+      }
       setExtOps(html, totalAdded ? 'ok' : '');
       // 刷新动态数据（云模式）
       await refreshCloudData();
