@@ -150,33 +150,36 @@ export async function onRequest({ request, env }) {
         // 来源表附页码区间（PDF 内部页），供前端「指标截图检索」优先定位；与存量数据格式（…（P93-P94））一致
         const pageSuffix = loc ? `（P${loc.startPage}-P${loc.endPage}）` : '';
         for (const [code, ext] of Object.entries(matched)) {
-          const r = inds.find(x => x[5] === code);
-          if (!r) continue;
-          const per = PERIOD_ALIAS[r[9]] || r[9]; // 期间归一
-          const val = periodVal(ext, per);
-          if (val === null || val === undefined) continue;
-          // 机械匹配可疑值（行名降级匹配，多列表可能取错列）不入库：宁可缺失不误导，等待模式一或人工核
-          if (ext._suspicious && !ext._aiDirect) {
-            suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: val, 提示: '可疑匹配未入库' });
-            continue;
+          // 遍历该指标的全部模板行（期末/期初、本期/上期等多期间），分别按期间取值入库
+          const tplRows = inds.filter(x => x[5] === code);
+          if (!tplRows.length) continue;
+          for (const r of tplRows) {
+            const per = PERIOD_ALIAS[r[9]] || r[9]; // 期间归一（期末→本期末、期初→本期初、年度→本期）
+            const val = periodVal(ext, per);
+            if (val === null || val === undefined) continue;
+            // 机械匹配可疑值（行名降级匹配，多列表可能取错列）不入库：宁可缺失不误导，等待模式一或人工核
+            if (ext._suspicious && !ext._aiDirect) {
+              suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: val, 提示: '可疑匹配未入库' });
+              continue;
+            }
+            const isText = typeof val === 'string' && isNaN(Number(val));
+            const disp = isText ? val : (isNaN(Number(val)) ? null : Number(val));
+            const conv = isText ? val : convToYi(disp, ext['披露单位'] || r[10]);
+            if (ext._suspicious) {
+              suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: conv });
+            }
+            // 指标来源/关键词/来源表保留模板线索（PDF 行名、页码），不覆盖为"指标名-期间"
+            const srcText = typeof r[7] === 'string' && r[7].length > 2 ? r[7] : `${r[6]}-${r[9]}`;
+            const kwText = typeof r[8] === 'string' && r[8].length > 2 ? r[8] : `${r[6]}-${r[9]}`;
+            rows.push({
+              '公司类型': companyType, '公司名称': company, '报告期': year,
+              '报表类型': r[3], '报表名称': r[4], '指标编号': code, '指标名称': r[6],
+              '指标来源': srcText, '关键词': kwText,
+              '期间': per, '计量单位-披露': ext['披露单位'] || r[10] || '元', '计量单位-换算': r[11] || '亿元',
+              '数值-披露': disp, '数值-换算': conv,
+              '来源表': `${ext['来源'] || r[14] || `${r[3]} ${r[4]}`}${pageSuffix}`, '行序号': r[15], '列序号': r[16]
+            });
           }
-          const isText = typeof val === 'string' && isNaN(Number(val));
-          const disp = isText ? val : (isNaN(Number(val)) ? null : Number(val));
-          const conv = isText ? val : convToYi(disp, ext['披露单位'] || r[10]);
-          if (ext._suspicious) {
-            suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: conv });
-          }
-          // 指标来源/关键词/来源表保留模板线索（PDF 行名、页码），不覆盖为"指标名-期间"
-          const srcText = typeof r[7] === 'string' && r[7].length > 2 ? r[7] : `${r[6]}-${r[9]}`;
-          const kwText = typeof r[8] === 'string' && r[8].length > 2 ? r[8] : `${r[6]}-${r[9]}`;
-          rows.push({
-            '公司类型': companyType, '公司名称': company, '报告期': year,
-            '报表类型': r[3], '报表名称': r[4], '指标编号': code, '指标名称': r[6],
-            '指标来源': srcText, '关键词': kwText,
-            '期间': per, '计量单位-披露': ext['披露单位'] || r[10] || '元', '计量单位-换算': r[11] || '亿元',
-            '数值-披露': disp, '数值-换算': conv,
-            '来源表': `${ext['来源'] || r[14] || `${r[3]} ${r[4]}`}${pageSuffix}`, '行序号': r[15], '列序号': r[16]
-          });
         }
       }
 
