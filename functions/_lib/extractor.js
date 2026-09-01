@@ -130,19 +130,19 @@ ${indicatorLines}
 ${sliceText}
 
 【提取要点】
-1. 先判断本页是否为"${tableName}"（或其续表）：不是则 _title 填实际报表名，items 返回 []。
-2. 每个指标按"来源线索"语义定位（如"2025年1月1日的保险合同负债-亏损部分-未采用PAA"= 期初LC，在"亏损部分"列、未采用PAA组；"2025年12月31日的保险合同负债-合同服务边际"= 期末CSM）。行名以文本实际为准，不要生搬硬套线索文字；严禁取整行合计、严禁跨行错位、严禁子串误匹配。
-3. 本期/上期：按表头 x 坐标对齐判断（表头"2025年度/2024年度"或"本期/上期"或"期末/期初"）。**本页可能只有一列数据（如只有2025年度/本期），没有的期间填 null 即可——严禁因缺少另一期而放弃该项**。
-4. 未找到：值填 null；若整张表未披露填"未披露"（字符串）。
+1. 先判断本页是否为"${tableName}"（或其续表）：不是则 _title 填实际报表名，rows 返回 []。
+2. **把本页表格的每一行数据都列出来（行提取）**：行名保留 PDF 原文，带"减：""其中：""四、"前缀的也要列。每行的数值按表头列名组织（多列表如"非亏损部分/亏损部分/已发生赔款负债/合计"、单列表如"2025年度/2024年度"）。
+3. 本期/上期：单列表按表头 x 坐标对齐判断（"2025年度/2024年度"或"本期/上期"或"期末/期初"），分别填入 本期/上期；本页只有一列时另一期间填 null——严禁因缺一列放弃该行。
+4. 未找到的指标行：不列即可。整张表未披露：rows 返回 []，_title 填实际表名。
 5. 数值为数字（去千分位、括号表负数）；文本值（折现率区间、置信水平）原样字符串。
 6. 只输出 JSON，不要解释文字。
 
 【输出要求】
-{"_title": "合并利润表", "items": [{"指标编号": "B01", "本期": 214136, "上期": 208161, "披露单位": "百万元"}]}
-- items 列出**本页能确定全部或部分值**的指标（每项必须含 指标编号/本期/上期/披露单位；只有一个期间的值时另一期间填 null）
-- **能确定一个期间的指标也必须列入**（如本页只有2025年度列，C01 本期=67105、上期=null 也要列出）——严禁因为缺一列或值不确定就整项跳过
-- 只有本页完全没有该指标对应行/值时，才不列入 items（留给其他页）
-- 输出里不得出现除 _title 和 items 外的顶层 key`;
+{"_title": "合并利润表", "rows": [{"行名": "保险服务收入", "本期": 214136, "上期": 208161, "披露单位": "百万元"}, {"行名": "2025年1月1日的保险合同负债", "期间": "本期", "列": {"非亏损部分": 5687512, "亏损部分": 67105, "已发生赔款负债": 34839, "合计": 5789456}, "披露单位": "百万元"}]}
+- 每行对象：行名（必填）+ 披露单位（必填）+ 本期/上期（单列表，缺填 null）+ "列"（多列表，可选，键=表头列名，值=该行该列数值）+ "期间"（可选，如"本期"/"上期"——本页数据对应哪一期）
+- **多列表务必输出"列"结构（每个列名对应一个值），不要只给一个数字**；单列表输出 本期/上期 即可
+- 严禁漏行：所有数据行（含小计/合计/其中行）都要列出，行名保留原文
+- 输出里不得出现除 _title 和 rows 外的顶层 key`;
 
   const content = await chat(env, {
     system: buildSystemPrompt(),
@@ -168,7 +168,7 @@ ${sliceText}
     }
     return result;
   }
-  // 模式二：rows 行提取（后端匹配）
+  // 模式二：rows 行提取（后端匹配；支持"列"多列结构与"期间"标注）
   if (Array.isArray(parsed.rows)) {
     result._title = String(parsed._title || '').trim();
     for (const r of parsed.rows) {
@@ -176,6 +176,8 @@ ${sliceText}
         行名: String(r['行名'] || r['项目名'] || '').trim(),
         本期: r['本期'] ?? r['本年度'] ?? null,
         上期: r['上期'] ?? r['上年度'] ?? null,
+        期间: String(r['期间'] || '').trim(), // 多列表本页对应期（"本期"/"上期"）
+        列: (r['列'] && typeof r['列'] === 'object' && !Array.isArray(r['列'])) ? r['列'] : null,
         披露单位: String(r['披露单位'] || r['unit'] || '').trim(),
         来源: `${tCode} ${tableName}`
       });
@@ -271,6 +273,27 @@ export function matchIndicators(indicators, rows) {
     cands.sort((a, b) => b.score - a.score);
     return { code, cands };
   };
+  // 从行对象取值：多列表按来源线索列名选列；单列表用本期/上期
+  // 返回 { 本期, 上期, _colMatched: bool }
+  const rowValue = (row, r7) => {
+    const col = String(r7 || '').match(/(非亏损部分|亏损部分|已发生赔款负债|合同服务边际|未来现金流量现值|非金融风险调整|非亏损合同|亏损合同|合计|未来现金流入现值|保险获取现金流量|税后净额)/);
+    const colName = col ? col[1] : null;
+    const per = (row['期间'] || '本期') === '上期' ? '上期' : '本期';
+    if (row['列'] && colName && row['列'][colName] !== undefined) {
+      return per === '上期'
+        ? { 本期: null, 上期: row['列'][colName], _colMatched: true }
+        : { 本期: row['列'][colName], 上期: null, _colMatched: true };
+    }
+    if (row['列']) {
+      // 有列但线索列名未匹配：取非空列值（一般"合计"在最后），标记可疑
+      const vals = Object.values(row['列']).filter(v => v !== null && v !== undefined && v !== '');
+      const v = vals.length ? vals[vals.length - 1] : null;
+      return per === '上期'
+        ? { 本期: null, 上期: v, _colMatched: false }
+        : { 本期: v, 上期: null, _colMatched: false };
+    }
+    return { 本期: row['本期'] ?? null, 上期: row['上期'] ?? null, _colMatched: true };
+  };
   // 第一轮：只取高置信候选（score>=3），保证"债权投资"不会抢"其他债权投资"
   const pending = [];
   for (const r of indicators) {
@@ -279,13 +302,14 @@ export function matchIndicators(indicators, rows) {
     if (high) {
       usedRows.add(high.idx);
       const row = high.row;
+      const v = rowValue(row, r[7]);
       out[code] = {
-        本期: row['本期'] ?? null,
-        上期: row['上期'] ?? null,
+        本期: v['本期'],
+        上期: v['上期'],
         披露单位: row['披露单位'] || r[10] || '',
         行名: row['行名'],
         来源: row['来源'] || `${r[3]} ${r[4]}`,
-        _suspicious: false
+        _suspicious: !v['_colMatched']
       };
     } else if (cands.length) {
       pending.push({ r, cands });
@@ -300,13 +324,14 @@ export function matchIndicators(indicators, rows) {
     if (!best) continue;
     usedRows.add(best.idx);
     const row = best.row;
+    const v = rowValue(row, r[7]);
     out[code] = {
-      本期: row['本期'] ?? null,
-      上期: row['上期'] ?? null,
+      本期: v['本期'],
+      上期: v['上期'],
       披露单位: row['披露单位'] || r[10] || '',
       行名: row['行名'],
       来源: row['来源'] || `${r[3]} ${r[4]}`,
-      _suspicious: best.score < 3
+      _suspicious: best.score < 3 || !v['_colMatched']
     };
   }
   return out;
@@ -326,11 +351,13 @@ export function mergePageResults(pages, tableName) {
       if (!row['行名']) continue;
       const dup = allRows.findIndex(x => x['行名'] === row['行名']);
       if (dup >= 0) {
-        // 靠后的页优先：非 null 值覆盖
+        // 靠后的页优先：非 null 值覆盖（含多列结构与期间）
         allRows[dup] = {
           行名: row['行名'],
           本期: row['本期'] ?? allRows[dup]['本期'],
           上期: row['上期'] ?? allRows[dup]['上期'],
+          期间: row['期间'] || allRows[dup]['期间'] || '',
+          列: row['列'] || allRows[dup]['列'] || null,
           披露单位: row['披露单位'] || allRows[dup]['披露单位'],
           来源: row['来源'] || allRows[dup]['来源']
         };
