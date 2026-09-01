@@ -106,7 +106,7 @@ export async function onRequest({ request, env }) {
           }
           pageResults.push(pageRes);
           matchedRows = mergePageResults(pageResults, tableDesc);
-          const matched = matchIndicators(inds, matchedRows);
+          const matched = matchIndicators(inds, matchedRows, year);
           const covered = Math.max(Object.keys(matched).length, Object.keys(itemsAcc).length);
           // 覆盖全部指标即停止；连续两页无新增指标也停止（防无限翻页）
           if (covered >= uniqueInds) {
@@ -133,7 +133,7 @@ export async function onRequest({ request, env }) {
       for (const tCode of Object.keys(allItemsByTable)) {
         const { inds, items, loc } = allItemsByTable[tCode];
         const { rows: tableRows } = allRowsByTable[tCode] || { rows: [] };
-        const matched = matchIndicators(inds, tableRows);
+        const matched = matchIndicators(inds, tableRows, year);
         // 模式一优先：模型按编号输出的值覆盖机械匹配（AI 语义理解可处理多列表列选择，标记可信）
         for (const [code, it] of Object.entries(items)) {
           if (it['本期'] === null && it['上期'] === null) continue;

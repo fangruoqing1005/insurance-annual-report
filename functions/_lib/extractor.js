@@ -132,14 +132,14 @@ ${sliceText}
 【提取要点】
 1. 先判断本页是否为"${tableName}"（或其续表）：不是则 _title 填实际报表名，rows 返回 []。
 2. **把本页表格的每一行数据都列出来（行提取）**：行名保留 PDF 原文，带"减：""其中：""四、"前缀的也要列。每行的数值按表头列名组织（多列表如"非亏损部分/亏损部分/已发生赔款负债/合计"、单列表如"2025年度/2024年度"）。
-3. 本期/上期：单列表按表头 x 坐标对齐判断（"2025年度/2024年度"或"本期/上期"或"期末/期初"），分别填入 本期/上期；本页只有一列时另一期间填 null——严禁因缺一列放弃该行。
+3. **"期间"字段 = 报表期间（本期/上期），不是余额时点**：本页表头/标题含"2025年1月1日"或"2025年12月31日"→"本期"；含"2024年1月1日"或"2024年12月31日"→"上期"。行名里的"期初/期末"（如"2025年1月1日的保险合同负债"）是余额时点语义，不要写进"期间"字段。单列表分别填 本期/上期；本页只有一列时另一期间填 null——严禁因缺一列放弃该行。
 4. 未找到的指标行：不列即可。整张表未披露：rows 返回 []，_title 填实际表名。
 5. 数值为数字（去千分位、括号表负数）；文本值（折现率区间、置信水平）原样字符串。
 6. 只输出 JSON，不要解释文字。
 
 【输出要求】
 {"_title": "合并利润表", "rows": [{"行名": "保险服务收入", "本期": 214136, "上期": 208161, "披露单位": "百万元"}, {"行名": "2025年1月1日的保险合同负债", "期间": "本期", "列": {"非亏损部分": 5687512, "亏损部分": 67105, "已发生赔款负债": 34839, "合计": 5789456}, "披露单位": "百万元"}]}
-- 每行对象：行名（必填）+ 披露单位（必填）+ 本期/上期（单列表，缺填 null）+ "列"（多列表，可选，键=表头列名，值=该行该列数值）+ "期间"（可选，如"本期"/"上期"——本页数据对应哪一期）
+- 每行对象：行名（必填）+ 披露单位（必填）+ 本期/上期（单列表，缺填 null）+ "列"（多列表，可选，键=表头列名，值=该行该列数值）+ "期间"（可选，**只填"本期"或"上期"**，按表头年份判断）
 - **多列表务必输出"列"结构（每个列名对应一个值），不要只给一个数字**；单列表输出 本期/上期 即可
 - 严禁漏行：所有数据行（含小计/合计/其中行）都要列出，行名保留原文
 - 输出里不得出现除 _title 和 rows 外的顶层 key`;
@@ -235,9 +235,20 @@ export function rowNameMatches(rowName, indName) {
 // indicators: 模板行（含 指标编号/指标名称/关键词/期间/计量单位-披露）
 // rows: 提取的行 [{行名, 本期, 上期, 披露单位}]
 // 返回 { code: { 本期, 上期, 披露单位, 行名, 来源 } }（含可疑项 _suspicious 标记）
-export function matchIndicators(indicators, rows) {
+export function matchIndicators(indicators, rows, year) {
   const out = {};
   const usedRows = new Set();
+  // 行对象期间判定：优先行名年份（"2025年1月1日"→本期、"2024年1月1日"→上期），其次模型"期间"字段
+  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '');
+  const rowPeriod = (row) => {
+    const ym = String(row['行名'] || '').match(/(20\d{2})年/);
+    if (ym) {
+      const ry = parseInt(ym[1]);
+      if (reportYear && ry < reportYear) return '上期';
+      return '本期';
+    }
+    return String(row['期间'] || '').includes('上') ? '上期' : '本期';
+  };
   const candidatesOf = (r) => {
     const code = r[5];
     const indName = r[6];
@@ -280,7 +291,7 @@ export function matchIndicators(indicators, rows) {
     const clue = String(r7 || '');
     // 从行对象的实际列键中，找来源线索提到的列名（顺序=常用列优先级）
     const colName = row['列'] ? (COL_NAMES.find(c => clue.includes(c) && row['列'][c] !== undefined) || null) : null;
-    const per = (row['期间'] || '本期') === '上期' ? '上期' : '本期';
+    const per = rowPeriod(row) === '上期' ? '上期' : '本期';
     if (colName) {
       return per === '上期'
         ? { 本期: null, 上期: row['列'][colName], _colMatched: true }
@@ -355,15 +366,23 @@ export function mergePageResults(pages, tableName) {
       if (!row['行名']) continue;
       const dup = allRows.findIndex(x => x['行名'] === row['行名']);
       if (dup >= 0) {
-        // 靠后的页优先：非 null 值覆盖（含多列结构与期间）
+        // 同名行：若两行都带"列"且值不同（跨页不同期数据，如 P183/P184 同名行），保留两行不合并；
+        // 否则（单列/同值）靠后页非 null 覆盖
+        const prev = allRows[dup];
+        const bothCol = prev['列'] && row['列'];
+        const diffCol = bothCol && JSON.stringify(prev['列']) !== JSON.stringify(row['列']);
+        if (diffCol) {
+          allRows.push({ ...row }); // 不同期同名行，保留
+          continue;
+        }
         allRows[dup] = {
           行名: row['行名'],
-          本期: row['本期'] ?? allRows[dup]['本期'],
-          上期: row['上期'] ?? allRows[dup]['上期'],
-          期间: row['期间'] || allRows[dup]['期间'] || '',
-          列: row['列'] || allRows[dup]['列'] || null,
-          披露单位: row['披露单位'] || allRows[dup]['披露单位'],
-          来源: row['来源'] || allRows[dup]['来源']
+          本期: row['本期'] ?? prev['本期'],
+          上期: row['上期'] ?? prev['上期'],
+          期间: row['期间'] || prev['期间'] || '',
+          列: row['列'] || prev['列'] || null,
+          披露单位: row['披露单位'] || prev['披露单位'],
+          来源: row['来源'] || prev['来源']
         };
       } else {
         allRows.push({ ...row });
