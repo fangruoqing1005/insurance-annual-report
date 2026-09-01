@@ -275,11 +275,13 @@ export function matchIndicators(indicators, rows) {
   };
   // 从行对象取值：多列表按来源线索列名选列；单列表用本期/上期
   // 返回 { 本期, 上期, _colMatched: bool }
+  const COL_NAMES = ['非亏损部分', '亏损部分', '已发生赔款负债', '合同服务边际', '未来现金流量现值', '非金融风险调整', '非亏损合同', '亏损合同', '合计', '未来现金流入现值', '保险获取现金流量', '税后净额'];
   const rowValue = (row, r7) => {
-    const col = String(r7 || '').match(/(非亏损部分|亏损部分|已发生赔款负债|合同服务边际|未来现金流量现值|非金融风险调整|非亏损合同|亏损合同|合计|未来现金流入现值|保险获取现金流量|税后净额)/);
-    const colName = col ? col[1] : null;
+    const clue = String(r7 || '');
+    // 从行对象的实际列键中，找来源线索提到的列名（顺序=常用列优先级）
+    const colName = row['列'] ? (COL_NAMES.find(c => clue.includes(c) && row['列'][c] !== undefined) || null) : null;
     const per = (row['期间'] || '本期') === '上期' ? '上期' : '本期';
-    if (row['列'] && colName && row['列'][colName] !== undefined) {
+    if (colName) {
       return per === '上期'
         ? { 本期: null, 上期: row['列'][colName], _colMatched: true }
         : { 本期: row['列'][colName], 上期: null, _colMatched: true };
@@ -295,6 +297,7 @@ export function matchIndicators(indicators, rows) {
     return { 本期: row['本期'] ?? null, 上期: row['上期'] ?? null, _colMatched: true };
   };
   // 第一轮：只取高置信候选（score>=3），保证"债权投资"不会抢"其他债权投资"
+  // 注意：同一指标编号有"本期/上期"两条模板行 → 合并期间值而非覆盖
   const pending = [];
   for (const r of indicators) {
     const { code, cands } = candidatesOf(r);
@@ -303,13 +306,14 @@ export function matchIndicators(indicators, rows) {
       usedRows.add(high.idx);
       const row = high.row;
       const v = rowValue(row, r[7]);
+      const prev = out[code] || {};
       out[code] = {
-        本期: v['本期'],
-        上期: v['上期'],
-        披露单位: row['披露单位'] || r[10] || '',
+        本期: v['本期'] ?? prev['本期'] ?? null,
+        上期: v['上期'] ?? prev['上期'] ?? null,
+        披露单位: row['披露单位'] || prev['披露单位'] || r[10] || '',
         行名: row['行名'],
-        来源: row['来源'] || `${r[3]} ${r[4]}`,
-        _suspicious: !v['_colMatched']
+        来源: row['来源'] || prev['来源'] || `${r[3]} ${r[4]}`,
+        _suspicious: (prev['_suspicious'] || false) || !v['_colMatched']
       };
     } else if (cands.length) {
       pending.push({ r, cands });
