@@ -617,13 +617,13 @@ body {
   flex: 1;
   padding: 24px 28px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   align-content: start;
 }
 .main.single-col { grid-template-columns: 1fr; }
-/* 表格类卡片跨满整行（单列全宽），其余图表保持双列 */
-.main .chart-card.full-width { grid-column: 1 / -1; }
+/* 数据分析页统一单列全宽 */
+.main .chart-card { grid-column: 1 / -1; }
 
 /* ===== Chart Card ===== */
 .chart-card {
@@ -695,7 +695,7 @@ body {
   margin-top: 4px;
   line-height: 1.4;
 }
-.chart-body { padding: 12px 12px 16px; height: 340px; }
+.chart-body { padding: 12px 12px 16px; height: 400px; }
 .chart-body.table-body { height: auto; padding: 8px 16px 16px; overflow-x: auto; }
 /* 图表自动解读 */
 .chart-insight {
@@ -1299,8 +1299,15 @@ body {
       <div class="nav-item" id="navDownload">
         <i class="icon fa-solid fa-cloud-arrow-down"></i><span>年报下载</span>
       </div>
-      <div class="nav-item" id="navExtract">
-        <i class="icon fa-solid fa-wand-magic-sparkles"></i><span>智能提取</span>
+      <div class="nav-group" data-group="extract">
+        <div class="nav-item" id="navExtract">
+          <i class="icon fa-solid fa-wand-magic-sparkles"></i><span>智能提取</span>
+          <i class="nav-toggle fa-solid fa-chevron-right" data-toggle="extract" title="展开/收起子目录"></i>
+        </div>
+        <div class="nav-subs">
+          <div class="nav-sub active" data-sub="extract-inject"><span>AI 提取入库</span></div>
+          <div class="nav-sub" data-sub="extract-shot"><span>指标截图检索</span></div>
+        </div>
       </div>
       <div class="nav-group" data-group="database">
         <div class="nav-item" id="navDatabase">
@@ -1530,12 +1537,6 @@ body {
           </div>
           <div class="db-mgmt-box">
             <div class="db-mgmt-box-title">导出数据（当前筛选结果）</div>
-            <div class="db-mgmt-fields">
-              <span style="font-size:11px;color:var(--c-text-muted);line-height:1.5;">
-                导出数据库页当前筛选后的全部行（含 17 列完整字段）。
-                JSON 格式可直接用于「上传导入」增量合并；CSV 可用 Excel/WPS 打开。
-              </span>
-            </div>
             <div style="display:flex;gap:8px;margin-top:6px;">
               <button class="btn-apply cloud-only" id="btnExportCsv" style="width:auto;padding:5px 14px;font-size:12px;">导出 CSV</button>
               <button class="btn-apply cloud-only" id="btnExportJson" style="width:auto;padding:5px 14px;font-size:12px;background:var(--c-bg, #2B4C6F);">导出 JSON</button>
@@ -1547,9 +1548,6 @@ body {
               <label>选择 JSON 文件：</label>
               <input type="file" id="mgmtFile" accept=".json,.txt" style="font-size:11px;">
               <button class="btn-apply cloud-only" id="btnUploadData" style="width:auto;padding:5px 12px;font-size:12px;">上传并合并</button>
-            </div>
-            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;">
-              文件格式：<code>{ "rows": [ {...17列行对象...}, ... ] }</code>，或直接是一个行对象数组；按 公司+报告期+指标编号+期间 增量覆盖。
             </div>
           </div>
         </div>
@@ -1670,16 +1668,6 @@ body {
         <span class="page-sub">IFRS17 指标定位表全流程 · 指标模板预览 · 提取进度跟踪</span>
       </div>
 
-      <!-- 流程步骤条 -->
-      <div class="ext-steps">
-        <div class="ext-step done"><span class="step-no">0</span><span class="step-name">收集PDF</span></div>
-        <div class="ext-step"><span class="step-no">1</span><span class="step-name">PDF文本提取</span></div>
-        <div class="ext-step"><span class="step-no">2</span><span class="step-name">指标模板</span></div>
-        <div class="ext-step"><span class="step-no">3</span><span class="step-name">数据提取+勾稽</span></div>
-        <div class="ext-step"><span class="step-no">4</span><span class="step-name">生成单独版</span></div>
-        <div class="ext-step"><span class="step-no">5</span><span class="step-name">分批合并汇总</span></div>
-      </div>
-
       <!-- 提取操作区（云模式）：选公司 → AI 提取入库 -->
       <div class="dl-ops cloud-only" id="extOps" style="display:none;">
         <div class="dl-ops-left">
@@ -1712,7 +1700,6 @@ body {
             <i class="fa-solid fa-rotate-right" style="font-size:10px;"></i> 刷新
           </button>
         </div>
-        <div style="width:100%;font-size:11px;color:var(--c-text-muted);margin-bottom:6px;">点击行自动填入「目标公司 / 报告期」，再点「AI 提取入库」。数据来源与年报下载页的已下载记录一致（云端存储实时探测 / 本地记录）。</div>
         <div class="dl-table-wrap" id="extPdfTable" style="width:100%;"></div>
       </div>
 
@@ -2078,6 +2065,7 @@ const state = {
 };
 const appliedState = { periods: [], types: [], companies: [] };
 let currentSubPage = 'key-ops';
+let currentExtractSub = 'inject'; // 'inject' | 'shot'
 let currentView = 'overview'; // 'overview' | 'download' | 'extract' | 'database' | 'analysis' | 'discount' | 'ask'
 let hasApplied = false;
 
@@ -2105,8 +2093,8 @@ function switchView(view) {
   // 子页面导航：按组控制（进入页面自动展开对应子目录并收起其他组）
   document.querySelectorAll('.nav-group').forEach(g => {
     const grp = g.dataset.group;
-    if (grp !== 'analysis' && grp !== 'database') return;
-    const active = (grp === 'analysis' && isAnalysis) || (grp === 'database' && isDb);
+    if (grp !== 'analysis' && grp !== 'database' && grp !== 'extract') return;
+    const active = (grp === 'analysis' && isAnalysis) || (grp === 'database' && isDb) || (grp === 'extract' && isExtract);
     g.classList.toggle('open', active);
   });
   document.getElementById('navOverview').classList.toggle('active', isOverview);
@@ -2116,12 +2104,18 @@ function switchView(view) {
   document.getElementById('navAnalysis').classList.toggle('active', isAnalysis);
   document.getElementById('navDiscount').classList.toggle('active', isDiscount);
   document.getElementById('navAsk').classList.toggle('active', isAsk);
+  // 智能提取子导航高亮（仅清除 extract 自身子项，避免干扰数据库/数据分析）
+  if (isExtract) {
+    document.querySelectorAll('.nav-sub[data-sub^="extract-"]').forEach(n => n.classList.remove('active'));
+    const subKey = currentExtractSub === 'shot' ? 'extract-shot' : 'extract-inject';
+    const activeSub = document.querySelector(`.nav-sub[data-sub="${subKey}"]`);
+    if (activeSub) activeSub.classList.add('active');
+  }
   // 云模式专属区域显隐
   const cloudOn = isCloudMode;
   document.getElementById('dlOps').style.display = cloudOn && isDownload ? '' : 'none';
   document.getElementById('dbMgmt').style.display = cloudOn && isDb ? '' : 'none';
-  document.getElementById('extTplMgmt').style.display = cloudOn && isExtract ? '' : 'none';
-  document.getElementById('extOps').style.display = cloudOn && isExtract ? '' : 'none';
+  // 智能提取子页面显隐在 renderExtractView 中统一处理
   if (isDb) renderDatabase();
   if (isOverview) renderOverviewView();
   if (isDownload) renderDownloadView();
@@ -2338,6 +2332,14 @@ function initSidebar() {
           const target = sub === 'db-mgmt' ? document.getElementById('dbMgmt') : document.getElementById('dbView');
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 120);
+        return;
+      }
+      // 智能提取子目录：AI 提取入库 / 指标截图检索
+      if (sub === 'extract-inject' || sub === 'extract-shot') {
+        currentExtractSub = sub === 'extract-shot' ? 'shot' : 'inject';
+        switchView('extract');
+        document.querySelectorAll('.nav-sub').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
         return;
       }
       switchView('analysis');
@@ -3401,13 +3403,12 @@ function buildChartCards() {
   if (!container) return;
 
   const specs = CHART_CONFIGS.filter(c => c.subPage === currentSubPage);
-  // 表格类卡片跨满整行（单列全宽），其余图表保持双列
   container.classList.remove('single-col');
 
   container.innerHTML = specs.map(spec => {
     const annotationHtml = spec.annotation ? `<div class="chart-annotation">${spec.annotation}</div>` : '';
     const bodyCls = spec.chartType === 'table' ? 'chart-body table-body' : 'chart-body';
-    const cardCls = spec.chartType === 'table' ? 'chart-card full-width' : 'chart-card';
+    const cardCls = 'chart-card';
     // 表格类型不支持图片导出，不显示导出按钮
     const exportHtml = spec.chartType === 'table' ? '' : [
       '<div class="chart-header-right">',
@@ -4948,6 +4949,22 @@ function setDbMgmtStatus(html, cls) {
 }
 
 function renderExtractView() {
+  const isInject = currentExtractSub === 'inject';
+  const isShot = currentExtractSub === 'shot';
+  // 子页面元素显隐：AI 提取入库 / 指标截图检索
+  document.getElementById('extOps').style.display = (isCloudMode && isInject) ? '' : 'none';
+  document.getElementById('extPdfPanel').style.display = isInject ? '' : 'none';
+  document.getElementById('shotPanel').style.display = isShot ? '' : 'none';
+  document.getElementById('extTplMgmt').style.display = (isCloudMode && isInject) ? '' : 'none';
+  document.querySelector('.ext-toolbar').style.display = isInject ? '' : 'none';
+  document.getElementById('extTemplatePanel').style.display = isInject ? '' : 'none';
+  document.getElementById('extProgressPanel').style.display = 'none'; // 默认隐藏，由 tab 切换控制；shot 页也隐藏
+
+  if (isShot) {
+    // 指标截图检索子页面：shotPanel 已单独显示，初始化在 initExtractView 中完成
+    return;
+  }
+
   // 模板摘要
   const tpl = TEMPLATE_163 || [];
   const reports = {};
@@ -5005,12 +5022,7 @@ function renderExtractView() {
   `;
 
   // 已就绪 PDF 文件面板（联动年报下载已下载记录；静态模式也显示本地记录）
-  const pdfPanel = document.getElementById('extPdfPanel');
-  if (pdfPanel) pdfPanel.style.display = '';
   renderExtPdfTable();
-  // 指标截图检索面板
-  const shotPanel = document.getElementById('shotPanel');
-  if (shotPanel) shotPanel.style.display = '';
 }
 
 // ============== 折现率 View（复刻 v2.0） ==============
