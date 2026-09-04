@@ -790,6 +790,7 @@ body {
 .data-table.db-table td.col-type { min-width: 70px; text-align: center; }
 .data-table.db-table td.col-name { min-width: 130px; text-align: left; }
 .data-table.db-table td.col-src { min-width: 200px; white-space: normal; word-break: break-all; text-align: left; }
+.data-table.db-table td.col-kw { min-width: 150px; max-width: 220px; white-space: normal; word-break: break-all; text-align: left; }
 .data-table.db-table td.col-report { min-width: 80px; text-align: center; }
 .data-table.db-table td.col-std { min-width: 90px; text-align: center; }
 .data-table.db-table th.sticky-col { position: sticky; left: 0; z-index: 2; background: var(--c-navy-light); }
@@ -1543,11 +1544,14 @@ body {
             </div>
           </div>
           <div class="db-mgmt-box">
-            <div class="db-mgmt-box-title">上传导入（JSON 增量合并，支持数据库页导出格式）</div>
+            <div class="db-mgmt-box-title">上传导入（支持 Excel / JSON，按 公司+报告期+指标编号+期间 增量覆盖）</div>
             <div class="db-mgmt-fields">
-              <label>选择 JSON 文件：</label>
-              <input type="file" id="mgmtFile" accept=".json,.txt" style="font-size:11px;">
-              <button class="btn-apply cloud-only" id="btnUploadData" style="width:auto;padding:5px 12px;font-size:12px;">上传并合并</button>
+              <label>选择文件（Excel .xlsx/.xls 或 JSON）：</label>
+              <input type="file" id="mgmtFile" accept=".xlsx,.xls,.json,.txt" style="font-size:11px;">
+              <button class="btn-apply cloud-only" id="btnUploadData" style="width:auto;padding:5px 12px;font-size:12px;">导入并合并</button>
+            </div>
+            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;">
+              Excel 表头需为 17 列标准格式（同「导出 CSV/JSON」），含「关键词」列；首行非表头的文件请先整理。
             </div>
           </div>
         </div>
@@ -3535,7 +3539,7 @@ function renderCharts() {
 }
 
 // ============== Database View ==============
-const DB_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '期间', '数值-换算', '数值-披露', '来源表', '标准化'];
+const DB_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '关键词', '期间', '数值-换算', '数值-披露', '来源表', '标准化'];
 // 导出用完整 17 列（数据对象全字段，JSON 回传「上传导入」可无损增量覆盖）
 const EXPORT_COLUMNS = ['公司类型', '公司名称', '报告期', '报表类型', '报表名称', '指标编号', '指标名称', '指标来源', '关键词', '期间', '计量单位-披露', '计量单位-换算', '数值-披露', '数值-换算', '来源表', '行序号', '列序号'];
 
@@ -3638,6 +3642,7 @@ function renderDatabase() {
       <td class="col-type">${r['公司类型']}</td><td class="sticky-col">${r['公司名称']}</td><td class="col-report">${r['报告期']}</td>
       <td>${r['报表类型']}</td><td class="col-name">${r['报表名称']}</td><td class="col-code">${r['指标编号']}</td>
       <td class="col-name">${r['指标名称']}</td><td class="col-src">${r['指标来源']}</td>
+      <td class="col-kw">${r['关键词'] || ''}</td>
       <td class="col-period">${r['期间']}</td>${valHtml}${dispHtml}
       <td class="col-src" style="font-size:10px;color:var(--c-text-muted);">${r['来源表']}</td>
       ${stdHtml}
@@ -4841,6 +4846,65 @@ async function renderExtPdfTable(force = false) {
 }
 
 // ============== 数据库管理（云模式）：范围删除 + 上传导入 ==============
+// SheetJS 多 CDN 兜底动态加载（仅当用户选择 .xlsx/.xls 时才加载，不阻塞首屏）
+const XLSX_CDNS = [
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+];
+function loadSheetJS() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) return resolve();
+    const tryNext = (i) => {
+      if (i >= XLSX_CDNS.length) return reject(new Error('SheetJS 加载失败，请检查网络后重试'));
+      const s = document.createElement('script');
+      s.src = XLSX_CDNS[i];
+      s.onload = () => window.XLSX ? resolve() : tryNext(i + 1);
+      s.onerror = () => tryNext(i + 1);
+      document.head.appendChild(s);
+    };
+    tryNext(0);
+  });
+}
+// 解析导入文件 → { rows, skipped }；.xlsx/.xls 走 SheetJS，其余按 JSON
+async function parseImportFile(file) {
+  const name = (file.name || '').toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    await loadSheetJS();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (!aoa || aoa.length < 2) throw new Error('Excel 内容为空或只有表头');
+    const head = (aoa[0] || []).map(h => String(h).trim());
+    const colIdx = EXPORT_COLUMNS.map(c => head.indexOf(c));
+    const missing = EXPORT_COLUMNS.filter((c, i) => colIdx[i] < 0);
+    if (missing.length) throw new Error('Excel 首行缺标准列：' + missing.join('、') + '（需 17 列完整表头，含「关键词」）');
+    const rows = [];
+    let skipped = 0;
+    for (let i = 1; i < aoa.length; i++) {
+      const line = aoa[i];
+      if (!line) { skipped++; continue; }
+      const o = {};
+      EXPORT_COLUMNS.forEach((c, j) => {
+        let v = line[colIdx[j]];
+        if (v === undefined || v === null) v = '';
+        o[c] = (typeof v === 'object' && v instanceof Date) ? v.toISOString().slice(0, 10) : String(v).trim();
+      });
+      // 有效行判定：upsert 键三要素（公司名称+指标编号+期间）齐全
+      if (o['公司名称'] && o['指标编号'] && o['期间']) rows.push(o);
+      else skipped++;
+    }
+    if (!rows.length) throw new Error('未找到有效数据行（需 公司名称+指标编号+期间 均非空）');
+    return { rows, skipped };
+  }
+  const text = await file.text();
+  const parsed = JSON.parse(text);
+  const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.rows) ? parsed.rows : null);
+  if (!rows || rows.length === 0) throw new Error('JSON 中未找到 rows 数组');
+  return { rows, skipped: 0 };
+}
+
 function initDbMgmt() {
   const compSel = document.getElementById('mgmtCompany');
   const perSel = document.getElementById('mgmtPeriod');
@@ -4875,14 +4939,12 @@ function initDbMgmt() {
 
   document.getElementById('btnUploadData').addEventListener('click', async () => {
     const file = document.getElementById('mgmtFile').files[0];
-    if (!file) { setDbMgmtStatus('请先选择 JSON 文件', 'err'); return; }
+    if (!file) { setDbMgmtStatus('请先选择文件（Excel 或 JSON）', 'err'); return; }
     if (!isCloudMode) { setDbMgmtStatus('需部署到 Cloudflare 后可用', 'err'); return; }
     try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.rows) ? parsed.rows : null);
-      if (!rows || rows.length === 0) throw new Error('未找到 rows 数组');
-      setDbMgmtStatus(`正在上传合并 ${rows.length} 行…`);
+      setDbMgmtStatus('正在解析文件…');
+      const { rows, skipped } = await parseImportFile(file);
+      setDbMgmtStatus(`正在上传合并 ${rows.length} 行${skipped ? `（跳过 ${skipped} 行空/无效行）` : ''}…`);
       const { resp, data } = await apiFetch('/api/data', { method: 'POST', body: { rows } });
       if (resp.ok && data.ok) {
         setDbMgmtStatus(`已合并 ${data.added} 行，数据库现有 ${data.total} 行`, 'ok');
