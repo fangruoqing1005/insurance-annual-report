@@ -18,12 +18,49 @@ const KEY_CHAINS = {
   '本期': ['本期'], '上期': ['上期'], '年度': ['本期']
 };
 function periodVal(ext, r, year) {
+  if (!ext) return null;
   const key = tplPeriodKey(r, year) || PERIOD_ALIAS[r[9]] || String(r[9] || '');
   const chain = KEY_CHAINS[key] || [key];
   for (const k of chain) {
     if (ext[k] !== null && ext[k] !== undefined) return ext[k];
   }
   return null;
+}
+// 行表型打标：页文本含 PAA/非PAA 子表分组标题 → 该页所有行打 _paa（M2 调节表非PAA/PAA 同名行分流依据）
+// 注意判定顺序：'未采用保费分配法计量的合同' 含子串 '采用保费分配法计量的合同'，必须先查"未采用"
+function tagPageRows(pageRes, pageSlice) {
+  const s = String(pageSlice || '');
+  const hasNonPaa = s.includes('未采用保费分配法计量的合同');
+  const hasPaa = !hasNonPaa && s.includes('采用保费分配法计量的合同');
+  if (!hasPaa && !hasNonPaa) return; // 页无 PAA 分组标题（普通表）→ 不打标
+  for (const row of pageRes.rows || []) row['_paa'] = hasPaa;
+}
+// 页期间回填：页内行名日期单一报告年度（如 P184 全 2024）且行未标期间 → 按年度回填 上期/本期
+// 跨年度混合页（E/G 同页 P189）跳过；单列行不受影响（rowValue 走 本期/上期 字段）
+function fillPagePeriod(pageRes, year) {
+  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
+  if (!reportYear) return;
+  const ys = new Set();
+  for (const row of pageRes.rows || []) {
+    const m = String(row['行名'] || '').match(/(20\d{2})\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日/);
+    if (m) ys.add(+m[1]);
+  }
+  if (ys.size !== 1) return;
+  const y = [...ys][0];
+  const per = y === reportYear ? '本期' : y === reportYear - 1 ? '上期' : null;
+  if (!per) return;
+  for (const row of pageRes.rows || []) {
+    if (row['列'] && typeof row['列'] === 'object' && !String(row['期间'] || '').trim()) row['期间'] = per;
+  }
+}
+// 覆盖度：按模板行（编号×期间组合）逐个尝试取值——PAA/非PAA 同名不同期的每行各自计数，
+// 避免"编号全覆盖即停"导致 PAA 上期页（P186）漏扫
+function coverOf(inds, matched, year) {
+  let n = 0;
+  for (const r of inds) {
+    if (periodVal(matched[r[5]], r, year) !== null) n++;
+  }
+  return n;
 }
 // T09/T10 正则直取：折现率区间为日期键小表（键不在常规列名内）、置信水平为正文散文，行提取无法覆盖
 // 同年度首次出现优先（集团报表在母公司报表之前）
@@ -103,7 +140,6 @@ export async function onRequest({ request, env }) {
           continue;
         }
         // 逐页提取：优先只用主表首页（表头页）；若指标覆盖不足再向后扩展，避免混入后续页的公司报表
-        const uniqueInds = new Set(inds.map(r => r[5])).size;
         const pageResults = [];
         const itemsAcc = {}; // 模式一：模型按编号输出的累积（靠后页优先）
         // T09/T10：折现率区间为日期键小表（键不在常规列名内）、置信水平为正文散文，行提取无法覆盖
@@ -148,11 +184,14 @@ export async function onRequest({ request, env }) {
             };
           }
           pageResults.push(pageRes);
+          // 行表型打标（PAA/非PAA 分流）+ 页期间回填（调节表跨期同名行依赖，模型标注偶发缺失的兜底）
+          tagPageRows(pageRes, pageSlice);
+          fillPagePeriod(pageRes, year);
           matchedRows = mergePageResults(pageResults, tableDesc);
           const matched = matchIndicators(inds, matchedRows, year);
-          const covered = Math.max(Object.keys(matched).length, Object.keys(itemsAcc).length);
-          // 覆盖全部指标即停止；连续两页无新增指标也停止（防无限翻页）
-          if (covered >= uniqueInds) {
+          const covered = coverOf(inds, matched, year);
+          // 覆盖全部模板行（编号×期间）即停止；连续两页无新增覆盖也停止（防无限翻页）
+          if (covered >= inds.length) {
             reached = p;
             break;
           }

@@ -363,6 +363,13 @@ export function matchIndicators(indicators, rows, year) {
     rows.forEach((row, idx) => {
       const rowName = row['行名'];
       if (!rowName || isEmptyRow(row)) return;
+      // PAA/非PAA 子表分流：模板行线索明确"采用PAA/未采用PAA"时，行必须带对应表型标记（_paa 由 extract.js 按页表头打标）
+      // 防 M2 调节表非PAA(P183/184)与PAA(P185/186)同名行（"保险合同金融变动额"等）串值
+      // 注意顺序：'未采用PAA' 含子串 '采用PAA'，必须先判"未采用"
+      const rSrc = String(r[7] || '') + '|' + String(r[8] || '');
+      const wantNonPaa = rSrc.includes('未采用PAA');
+      const wantPaa = !wantNonPaa && rSrc.includes('采用PAA');
+      if ((wantPaa && row['_paa'] !== true) || (wantNonPaa && row['_paa'] !== false)) return;
       // 已被占用：单列行仅同编号（另一期间模板行）可复用；多列行需取未用过的列
       if (usedRows.has(idx)) {
         if (rowOwner.get(idx) !== code) {
@@ -508,7 +515,8 @@ export function mergePageResults(pages, tableName) {
           期间: row['期间'] || prev['期间'] || '',
           列: row['列'] || prev['列'] || null,
           披露单位: row['披露单位'] || prev['披露单位'],
-          来源: row['来源'] || prev['来源']
+          来源: row['来源'] || prev['来源'],
+          _paa: row['_paa'] ?? prev['_paa']
         };
       } else {
         allRows.push({ ...row });

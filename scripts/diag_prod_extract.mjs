@@ -32,6 +32,13 @@ const doc = await pdfjs.getDocument({ data: pdfBuf.slice().buffer, disableWorker
 console.log('PDF:', pdfFile, '页数:', doc.numPages);
 const { fullText, coordPages } = await extractPdfTextsForAI(doc, () => {});
 console.log('fullText:', fullText.length, 'chars, coordPages:', coordPages.length, 'pages');
+// 本地定位对比（生产行为参照）
+import { locateTable, TABLE_KEYWORDS } from '../functions/_lib/extractor.js';
+for (const t of (tablesArg ? tablesArg.split(',').map(s => s.trim().toUpperCase()) : Object.keys(TABLE_KEYWORDS))) {
+  const loc = locateTable(fullText, TABLE_KEYWORDS[t] || []);
+  if (loc) console.log(`本地定位 ${t}: p${loc.startPage}-p${loc.endPage} (命中 ${loc.hitPages.join(',')})`);
+  else console.log(`本地定位 ${t}: 未命中`);
+}
 
 const tables = tablesArg ? tablesArg.split(',').map(s => s.trim().toUpperCase()) : [];
 console.log('目标批次:', tables.length ? tables.join(',') : '(全部 10 张表, 10 次调用)');
