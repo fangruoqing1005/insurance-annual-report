@@ -398,6 +398,10 @@ export function matchIndicators(indicators, rows, year) {
       else if (sCore && (rnDate === sCore || rnDate.startsWith(sCore) || sCore.startsWith(rnDate))) score = 3;
       else if (kwCore && kwCore.includes(rn) && rn.length >= 2 && kwCore.length > rn.length + 2) score = 3; // 如"业务及管理费合计"⊃"合计"
       else if (rn.includes(inN) && !rn.startsWith('摊回') && !rn.startsWith('减') && !rn.startsWith('其中')) score = 1;
+      // 来源线索直接含行名全文（PDF 行名语义）→ 强信号加分
+      // 分流同关键词行（如 D06计息线索'保险合同金融变动额-合同服务边际' vs D07摊销线索'合同服务边际的摊销-合同服务边际'，kwCore 都是'合同服务边际'）
+      const rawClue = String(r[7] || '');
+      if (rawClue.includes(rowName) && rowName.length >= 4) score = Math.max(score, 4);
       // 线索日期与行名日期完全一致 → 强加分（同名行确定性分流：期初/期末、本期/上期）
       const rd = rowDateOf(row);
       if (clueDate && rd && clueDate.y === rd.y && clueDate.mo === rd.mo && clueDate.d === rd.d) score = Math.max(score, 0) + 3;
