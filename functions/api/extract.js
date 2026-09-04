@@ -214,6 +214,7 @@ export async function onRequest({ request, env }) {
       const companyType = (body.companyType || '').trim();
       const rows = [];
       const suspicious = [];
+      const rowsDiag = []; // 诊断：每模板行取值链命中情况（临时，验证后移除）
       const matchedCount = {};
       for (const tCode of Object.keys(allItemsByTable)) {
         const { inds, items, loc } = allItemsByTable[tCode];
@@ -234,7 +235,6 @@ export async function onRequest({ request, env }) {
         matchedCount[tCode] = Object.keys(matched).length;
         // 来源表附页码区间（PDF 内部页），供前端「指标截图检索」优先定位；与存量数据格式（…（P93-P94））一致
         const pageSuffix = loc ? `（P${loc.startPage}-P${loc.endPage}）` : '';
-        const rowsDiag = []; // 诊断：每模板行取值链命中情况
         for (const [code, ext] of Object.entries(matched)) {
           // 遍历该指标的全部模板行（期末/期初、本期/上期等多期间），分别按期间取值入库
           const tplRows = inds.filter(x => x[5] === code);
