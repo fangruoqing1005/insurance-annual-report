@@ -1421,18 +1421,6 @@ body {
         </div>
       </div>
 
-      <div class="dropdown" id="typeDropdown">
-        <button class="dropdown-trigger">
-          <i class="fa-solid fa-layer-group" style="color:var(--c-text-muted);font-size:11px;"></i>
-          <span class="label">公司类型</span>
-          <span class="count" id="typeCount">1</span>
-          <i class="arrow fa-solid fa-chevron-down"></i>
-        </button>
-        <div class="dropdown-panel">
-          <div class="panel-body" id="typeOptions"></div>
-        </div>
-      </div>
-
       <div class="dropdown" id="companyDropdown">
         <button class="dropdown-trigger" id="companyTrigger">
           <i class="fa-solid fa-building" style="color:var(--c-text-muted);font-size:11px;"></i>
@@ -1520,7 +1508,6 @@ body {
       <div class="db-mgmt cloud-only" id="dbMgmt" style="display:none;margin-top:16px;">
         <div class="db-mgmt-title">
           <i class="fa-solid fa-sliders" style="font-size:12px;"></i> 数据管理
-          <span style="font-weight:400;font-size:11px;color:var(--c-text-muted);margin-left:8px;">（需部署到 Cloudflare；删除/上传后数据库页与分析图表立即生效）</span>
           <button class="btn-reset" id="btnBackTop" style="margin-left:auto;padding:4px 10px;font-size:11px;" title="回到数据库页顶部">⤴ 回到顶部</button>
         </div>
         <div class="db-mgmt-row">
@@ -2064,10 +2051,9 @@ const STD_NOTES = {
 // ============== State ==============
 const state = {
   periods: ['2025年度'],
-  types: ['头部险企'],
   companies: ['中国人寿']
 };
-const appliedState = { periods: [], types: [], companies: [] };
+const appliedState = { periods: [], companies: [] };
 let currentSubPage = 'key-ops';
 let currentExtractSub = 'inject'; // 'inject' | 'shot'
 let currentView = 'overview'; // 'overview' | 'download' | 'extract' | 'database' | 'analysis' | 'discount' | 'ask'
@@ -2172,31 +2158,6 @@ function renderPeriodOptions() {
   document.getElementById('periodCount').style.display = state.periods.length > 0 ? 'inline-flex' : 'none';
 }
 
-// ============== Type Dropdown ==============
-function renderTypeOptions() {
-  const container = document.getElementById('typeOptions');
-  container.innerHTML = COMPANY_TYPES.map(t => `
-    <div class="ms-option ${state.types.includes(t) ? 'selected' : ''}" data-type="${t}">
-      <span class="checkbox"></span>
-      <span class="opt-label">${t}</span>
-      <span class="opt-meta">${TYPE_RULES[t].length}</span>
-    </div>
-  `).join('');
-  container.querySelectorAll('.ms-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      const t = opt.dataset.type;
-      if (state.types.includes(t)) {
-        state.types = state.types.filter(x => x !== t);
-      } else {
-        state.types.push(t);
-      }
-      updateAll();
-    });
-  });
-  document.getElementById('typeCount').textContent = state.types.length;
-  document.getElementById('typeCount').style.display = state.types.length > 0 ? 'inline-flex' : 'none';
-}
-
 // ============== Company Popover ==============
 function renderCompanyGroups(filter = '') {
   const container = document.getElementById('companyGroupList');
@@ -2285,7 +2246,6 @@ function renderSelectedChips() {
   const container = document.getElementById('selectedChips');
   const items = [];
   state.periods.forEach(p => items.push({kind: 'period', value: p}));
-  state.types.forEach(t => items.push({kind: 'type', value: t}));
   state.companies.forEach(c => items.push({kind: 'company', value: c}));
 
   if (items.length === 0) {
@@ -2300,7 +2260,6 @@ function renderSelectedChips() {
       const kind = x.dataset.remove;
       const v = x.dataset.value;
       if (kind === 'period') state.periods = state.periods.filter(p => p !== v);
-      else if (kind === 'type') state.types = state.types.filter(t => t !== v);
       else if (kind === 'company') state.companies = state.companies.filter(c => c !== v);
       updateAll();
     });
@@ -5364,21 +5323,19 @@ function updateAll() {
   refreshThemeColors();
   document.getElementById('companyCount').textContent = state.companies.length;
   renderPeriodOptions();
-  renderTypeOptions();
   const filter = document.getElementById('companySearch').value;
   renderCompanyGroups(filter);
   renderCompanyToolbar();
   renderSelectedChips();
   document.getElementById('companyStatus').textContent = `已选 ${state.companies.length} / ${COMPANIES.length}`;
 
-  const hasAny = state.periods.length + state.types.length + state.companies.length > 0;
+  const hasAny = state.periods.length + state.companies.length > 0;
   const btnClear = document.getElementById('btnClear');
   if (btnClear) btnClear.style.display = hasAny ? 'inline-block' : 'none';
 }
 
 function applyFilters() {
   appliedState.periods = [...state.periods];
-  appliedState.types = [...state.types];
   appliedState.companies = [...state.companies];
   hasApplied = true;
   renderCharts();
@@ -5579,7 +5536,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClear) {
     btnClear.addEventListener('click', () => {
       state.periods = [];
-      state.types = [];
       state.companies = [];
       updateAll();
     });
@@ -5601,7 +5557,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnResetFilter) {
     btnResetFilter.addEventListener('click', () => {
       state.periods = [];
-      state.types = [];
       state.companies = [];
       updateAll();
     });
