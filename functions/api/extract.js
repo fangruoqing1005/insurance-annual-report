@@ -234,6 +234,7 @@ export async function onRequest({ request, env }) {
         matchedCount[tCode] = Object.keys(matched).length;
         // 来源表附页码区间（PDF 内部页），供前端「指标截图检索」优先定位；与存量数据格式（…（P93-P94））一致
         const pageSuffix = loc ? `（P${loc.startPage}-P${loc.endPage}）` : '';
+        const rowsDiag = []; // 诊断：每模板行取值链命中情况
         for (const [code, ext] of Object.entries(matched)) {
           // 遍历该指标的全部模板行（期末/期初、本期/上期等多期间），分别按期间取值入库
           const tplRows = inds.filter(x => x[5] === code);
@@ -244,6 +245,14 @@ export async function onRequest({ request, env }) {
             const outKey = tplPeriodKey(r, year);
             const per = (r[3] === 'T01' || r[3] === 'T07') ? outKey : (String(outKey).startsWith('上') ? '上期' : '本期');
             let val = periodVal(ext, r, year);
+            const diagKey = outKey || PERIOD_ALIAS[r[9]] || String(r[9] || '');
+            const diagChain = KEY_CHAINS[diagKey] || [diagKey];
+            rowsDiag.push({
+              t: tCode, code, 模期间: r[9], outKey, per,
+              ext键: Object.keys(ext).filter(k => !k.startsWith('_')).map(k => `${k}=${ext[k]}`).join(' '),
+              链: diagChain.map(k => `${k}:${ext[k] ?? '∅'}`).join(' '),
+              值: val ?? '∅', 行名: ext['行名'] || '', suspicious: !!ext._suspicious
+            });
             if (val === null || val === undefined) continue;
             // H01/H02：PDF 中为括号负数（如 (20,168)），gold 全行业约定取正值入库
             if (code === 'H01' || code === 'H02') {
@@ -300,6 +309,7 @@ export async function onRequest({ request, env }) {
         rowsAdded: rows.length,
         dbRows: merged.length,
         tableNotes,
+        rowsDiag,
         suspicious,
         checks
       });
