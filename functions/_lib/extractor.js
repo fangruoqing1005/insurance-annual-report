@@ -260,6 +260,12 @@ function canonDate(y, mo, d, reportYear) {
   return y < reportYear ? '上期' : '本期';
 }
 const TPL_PERIOD_ALIAS = { '期初': '本期初', '期末': '本期末', '年度': '本期', '上期初': '上期初', '上期末': '上期末' };
+// 期间取值链（与 extract.js KEY_CHAINS 一致）：模板目标期间键 → 可接受的取值键
+const PERIOD_CHAINS = {
+  '本期初': ['本期初', '上期末', '上期'], '本期末': ['本期末', '本期'],
+  '上期初': ['上期初', '上期'], '上期末': ['上期末', '上期'],
+  '本期': ['本期'], '上期': ['上期'], '年度': ['本期']
+};
 // 模板行的目标期间键：优先来源线索/关键词中的日期（如"2025年1月1日的保险合同负债…"、"…-2025年12月31日"），其次期间字段（含日期型期间如"2025年12月31日"）
 export function tplPeriodKey(r, year) {
   const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
@@ -462,24 +468,29 @@ export function matchIndicators(indicators, rows, year) {
     }
   }
   // 第二轮：剩余指标用低分候选（可能不精确），标记 _suspicious；
-  // 同一指标编号已在高分轮匹配过（另一期间行）则跳过，避免低分候选覆盖正确结果
+  // 同一指标编号已在高分轮匹配过（另一期间行）时，仅当该模板行的目标期间键链上仍无值才补（防低分覆盖高分结果，也防丢期间）
   for (const { r, cands } of pending) {
     const code = r[5];
-    if (out[code]) continue;
+    const prev = out[code];
+    if (prev) {
+      const tKey = tplPeriodKey(r, year) || TPL_PERIOD_ALIAS[r[9]] || String(r[9] || '');
+      const chain = PERIOD_CHAINS[tKey] || [tKey];
+      if (chain.some(k => prev[k] !== null && prev[k] !== undefined)) continue; // 该期间已有值
+    }
     const best = cands[0];
     if (!best) continue;
     usedRows.add(best.idx);
     if (!rowOwner.has(best.idx)) rowOwner.set(best.idx, code);
     const row = best.row;
     const v = rowValue(row, r);
-    const merged = {};
+    const merged = { ...(prev || {}) };
     for (const k of Object.keys(v)) {
-      if (!k.startsWith('_')) merged[k] = v[k];
+      if (!k.startsWith('_') && (merged[k] === null || merged[k] === undefined)) merged[k] = v[k];
     }
-    merged['披露单位'] = row['披露单位'] || r[10] || '';
-    merged['行名'] = row['行名'];
-    merged['来源'] = row['来源'] || `${r[3]} ${r[4]}`;
-    merged['_suspicious'] = best.score < 3 || !v['_colMatched'];
+    merged['披露单位'] = merged['披露单位'] || row['披露单位'] || r[10] || '';
+    merged['行名'] = merged['行名'] || row['行名'];
+    merged['来源'] = merged['来源'] || row['来源'] || `${r[3]} ${r[4]}`;
+    merged['_suspicious'] = (merged['_suspicious'] || false) || best.score < 3 || !v['_colMatched'];
     out[code] = merged;
   }
   return out;

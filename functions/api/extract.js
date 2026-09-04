@@ -35,8 +35,8 @@ function tagPageRows(pageRes, pageSlice) {
   if (!hasPaa && !hasNonPaa) return; // 页无 PAA 分组标题（普通表）→ 不打标
   for (const row of pageRes.rows || []) row['_paa'] = hasPaa;
 }
-// 页期间回填：页内行名日期单一报告年度（如 P184 全 2024）且行未标期间 → 按年度回填 上期/本期
-// 跨年度混合页（E/G 同页 P189）跳过；单列行不受影响（rowValue 走 本期/上期 字段）
+// 页期间回填：页内行名日期单一报告年度（如 P184 全 2024）→ 无日期行名的多列行期间强制=该年度（本期/上期）
+// 覆盖模型偶发错误标注（如把上期页动态行标成"本期"）；跨年度混合页（E/G 同页 P189）跳过；单列行不受影响
 function fillPagePeriod(pageRes, year) {
   const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
   if (!reportYear) return;
@@ -50,7 +50,10 @@ function fillPagePeriod(pageRes, year) {
   const per = y === reportYear ? '本期' : y === reportYear - 1 ? '上期' : null;
   if (!per) return;
   for (const row of pageRes.rows || []) {
-    if (row['列'] && typeof row['列'] === 'object' && !String(row['期间'] || '').trim()) row['期间'] = per;
+    if (row['列'] && typeof row['列'] === 'object') {
+      const hasDate = /(20\d{2})\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日/.test(String(row['行名'] || ''));
+      if (!hasDate) row['期间'] = per; // 无日期行名：按页年度强制（覆盖模型标注错误）
+    }
   }
 }
 // 覆盖度：按模板行（编号×期间组合）逐个尝试取值——PAA/非PAA 同名不同期的每行各自计数，

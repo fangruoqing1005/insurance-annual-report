@@ -51,7 +51,7 @@ const DAT = {
     ['2024年12月31日的保险合同负债', '上期', ['4,763', '1,307', '28,915', '585', '35,570']]
   ]
 };
-// 关键：P184/P186 页行清空"期间"字段（模拟模型漏标）；P183/P185 保留
+// 关键：P184/P186 页行"期间"标错为 本期（模拟真实生产：模型把上期页动态行标成本期）
 const STRIP_PERIOD = { P184: true, P186: true };
 const PAGE_SLICE = { P183: '未采用保费分配法计量的合同', P184: '未采用保费分配法计量的合同', P185: '采用保费分配法计量的合同', P186: '采用保费分配法计量的合同' };
 
@@ -76,7 +76,10 @@ function fillPagePeriod(pageRes, year) {
   const per = y === reportYear ? '本期' : y === reportYear - 1 ? '上期' : null;
   if (!per) return;
   for (const row of pageRes.rows || []) {
-    if (row['列'] && typeof row['列'] === 'object' && !String(row['期间'] || '').trim()) row['期间'] = per;
+    if (row['列'] && typeof row['列'] === 'object') {
+      const hasDate = /(20\d{2})\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日/.test(String(row['行名'] || ''));
+      if (!hasDate) row['期间'] = per;
+    }
   }
 }
 const PERIOD_ALIAS = { '期初': '本期初', '期末': '本期末', '年度': '本期' };
@@ -104,7 +107,7 @@ const pageResList = [];
 let prevCovered = -1, noGainPages = 0, reached = null, covered = -1;
 for (const key of ['P183', 'P184', 'P185', 'P186']) {
   const rows = DAT[key].map(([行名, 期间, arr]) => mk(arr.length === 4 ? COL4 : COL5, 行名, 期间, arr));
-  if (STRIP_PERIOD[key]) for (const r of rows) delete r['期间']; // 模拟模型漏标
+  if (STRIP_PERIOD[key]) for (const r of rows) r['期间'] = '本期'; // 模拟模型把上期页行标错为"本期"
   const pageRes = { _title: '签发的保险合同的未到期责任负债和已发生赔款负债余额调节表', items: {}, rows };
   pageResList.push(pageRes);
   tagPageRows(pageRes, PAGE_SLICE[key]);
