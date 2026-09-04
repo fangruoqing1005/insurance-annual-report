@@ -217,7 +217,6 @@ export async function onRequest({ request, env }) {
       const companyType = (body.companyType || '').trim();
       const rows = [];
       const suspicious = [];
-      const rowsDiag = []; // 诊断：每模板行取值链命中情况（临时，验证后移除）
       const matchedCount = {};
       for (const tCode of Object.keys(allItemsByTable)) {
         const { inds, items, loc } = allItemsByTable[tCode];
@@ -248,14 +247,6 @@ export async function onRequest({ request, env }) {
             const outKey = tplPeriodKey(r, year);
             const per = (r[3] === 'T01' || r[3] === 'T07') ? outKey : (String(outKey).startsWith('上') ? '上期' : '本期');
             let val = periodVal(ext, r, year);
-            const diagKey = outKey || PERIOD_ALIAS[r[9]] || String(r[9] || '');
-            const diagChain = KEY_CHAINS[diagKey] || [diagKey];
-            rowsDiag.push({
-              t: tCode, code, 模期间: r[9], outKey, per,
-              ext键: Object.keys(ext).filter(k => !k.startsWith('_')).map(k => `${k}=${ext[k]}`).join(' '),
-              链: diagChain.map(k => `${k}:${ext[k] ?? '∅'}`).join(' '),
-              值: val ?? '∅', 行名: ext['行名'] || '', suspicious: !!ext._suspicious
-            });
             if (val === null || val === undefined) continue;
             // H01/H02：PDF 中为括号负数（如 (20,168)），gold 全行业约定取正值入库
             if (code === 'H01' || code === 'H02') {
@@ -312,7 +303,6 @@ export async function onRequest({ request, env }) {
         rowsAdded: rows.length,
         dbRows: merged.length,
         tableNotes,
-        rowsDiag,
         suspicious,
         checks
       });
