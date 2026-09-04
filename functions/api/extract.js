@@ -2,18 +2,47 @@
 import { route, ok, fail } from '../_lib/auth.js';
 import { readDB, writeDB, upsertRows, readJSON, exists, storeGetBytes } from '../_lib/db.js';
 import { extractText, extractTableText } from '../_lib/pdf.js';
-import { TABLE_KEYWORDS, locateTable, extractTable, mergePageResults, matchIndicators, convToYi } from '../_lib/extractor.js';
+import { TABLE_KEYWORDS, TABLE_REAL_NAMES, locateTable, slicePages, extractTable, mergePageResults, matchIndicators, tplPeriodKey, convToYi } from '../_lib/extractor.js';
 import { runChecks } from '../_lib/check.js';
 import { BUILTIN_TEMPLATE } from '../_lib/template_data.js';
 
 const PERIOD_ALIAS = { '期初': '本期初', '期末': '本期末', '年度': '本期' };
-// 模型输出字段只有 本期/上期（本期=期末/本年度，上期=期初/上年度）→ 映射模板期间
-const CUR_PERIODS = ['本期', '本期末', '期末'];
-const PREV_PERIODS = ['上期', '本期初', '期初', '上期初', '上期末'];
-function periodVal(ext, per) {
-  if (CUR_PERIODS.includes(per)) return ext['本期'] ?? null;
-  if (PREV_PERIODS.includes(per)) return ext['上期'] ?? null;
-  return ext[per] ?? null;
+// 期间取值链：模板目标期间键 → 依次尝试的取值键
+// matchIndicators 输出 6 键规范期间体系（本期初/本期末/上期初/上期末/本期/上期）：
+// 调节型报表（日期行）四时点键齐全直接命中；列表型报表（资产负债表等无日期行）回落 本期/上期（AI 两列语义）
+const KEY_CHAINS = {
+  '本期初': ['本期初', '上期末', '上期'],
+  '本期末': ['本期末', '本期'],
+  '上期初': ['上期初', '上期'],
+  '上期末': ['上期末', '上期'],
+  '本期': ['本期'], '上期': ['上期'], '年度': ['本期']
+};
+function periodVal(ext, r, year) {
+  const key = tplPeriodKey(r, year) || PERIOD_ALIAS[r[9]] || String(r[9] || '');
+  const chain = KEY_CHAINS[key] || [key];
+  for (const k of chain) {
+    if (ext[k] !== null && ext[k] !== undefined) return ext[k];
+  }
+  return null;
+}
+// T09/T10 正则直取：折现率区间为日期键小表（键不在常规列名内）、置信水平为正文散文，行提取无法覆盖
+// 同年度首次出现优先（集团报表在母公司报表之前）
+function regexDirectExtract(tCode, sliceText, year) {
+  const items = {};
+  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
+  if (tCode === 'T09') {
+    const re = /(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日[^\d%]{0,60}?(\d{1,2}\.\d+)\s*%\s*[~～至\-]\s*(\d{1,2}\.\d+)\s*%/g;
+    const byYear = {}; let m;
+    while ((m = re.exec(sliceText)) !== null) {
+      const y = +m[1]; if (byYear[y] === undefined) byYear[y] = `${m[4]}%~${m[5]}%`;
+    }
+    if (reportYear && byYear[reportYear] !== undefined)
+      items['I01'] = { 本期: byYear[reportYear], 上期: byYear[reportYear - 1] ?? null, 披露单位: '%' };
+  } else if (tCode === 'T10') {
+    const m = sliceText.match(/按\s*(\d{2})\s*%\s*置信水平/);
+    if (m) items['J01'] = { 本期: `${m[1]}%`, 上期: null, 披露单位: '%' };
+  }
+  return items;
 }
 
 export async function onRequest({ request, env }) {
@@ -66,8 +95,8 @@ export async function onRequest({ request, env }) {
       for (const tCode of batchCodes) {
         const inds = template.filter(r => r[3] === tCode);
         const tableName = inds[0]?.[4] || tCode; // 入库用报表名（如"M2表"）
-        // AI 判断用真实表名（搜索关键词优先——模型不认"T03/M2表"代号，页面标题是"保险合同负债余额调节表"等）
-        const tableDesc = (TABLE_KEYWORDS[tCode] || [])[0] || tableName;
+        // AI 判断用真实表名（TABLE_REAL_NAMES：定位关键词与模型表名分离，如 T06 定位用"预计当期发生的赔款"但模型判断用"保险服务收入"）
+        const tableDesc = TABLE_REAL_NAMES[tCode] || (TABLE_KEYWORDS[tCode] || [])[0] || tableName;
         const loc = locateTable(fullText0, TABLE_KEYWORDS[tCode] || [tableName]);
         if (!loc) {
           tableNotes.push(`${tCode}: 未定位到关键词，跳过`);
@@ -77,9 +106,23 @@ export async function onRequest({ request, env }) {
         const uniqueInds = new Set(inds.map(r => r[5])).size;
         const pageResults = [];
         const itemsAcc = {}; // 模式一：模型按编号输出的累积（靠后页优先）
+        // T09/T10：折现率区间为日期键小表（键不在常规列名内）、置信水平为正文散文，行提取无法覆盖
+        // → 后端正则从定位页全文直取（首次出现优先=集团表在母公司表之前），绕过 AI 行提取与可疑拦截
+        const regexItems = regexDirectExtract(tCode, slicePages(fullText0, loc.startPage, loc.endPage), year);
+        for (const [code, it] of Object.entries(regexItems)) {
+          itemsAcc[code] = it;
+          tableNotes.push(`${tCode}: 正则直取 ${code} 本期=${it['本期']} 上期=${it['上期'] ?? '（无）'}`);
+        }
+        if (tCode === 'T09' || tCode === 'T10') {
+          allRowsByTable[tCode] = { inds, rows: [], loc };
+          allItemsByTable[tCode] = { inds, items: itemsAcc, loc };
+          tableNotes.push(`${tCode}: 正则直取模式，跳过 AI 行提取`);
+          continue;
+        }
         let matchedRows = [];
         let reached = null;
         let prevCovered = -1;
+        let noGainPages = 0;
         for (let p = loc.startPage; p <= loc.endPage; p++) {
           // 优先使用前端上传的坐标文本（零后端 CPU）；否则后端提取（兜底）
           const pageSlice = coordPages && coordPages[p - 1] != null
@@ -114,8 +157,11 @@ export async function onRequest({ request, env }) {
             break;
           }
           if (covered <= prevCovered && covered > 0) {
-            reached = p;
-            break;
+            // 连续 2 页无新增覆盖才停止（首页表头/次页续表的单页空档容错，避免提前 break 丢后续页）
+            noGainPages++;
+            if (noGainPages >= 2) { reached = p; break; }
+          } else {
+            noGainPages = 0;
           }
           prevCovered = covered;
         }
@@ -154,9 +200,20 @@ export async function onRequest({ request, env }) {
           const tplRows = inds.filter(x => x[5] === code);
           if (!tplRows.length) continue;
           for (const r of tplRows) {
-            const per = PERIOD_ALIAS[r[9]] || r[9]; // 期间归一（期末→本期末、期初→本期初、年度→本期）
-            const val = periodVal(ext, per);
+            // 输出期间（与 gold 约定一致）：T01/T07 输出四时点键（本期初/本期末/上期初/上期末）；
+            // 其余表压缩为本期/上期（含 T09 日期式期间"2025年12月31日"→本期）。期间同时是 upsert 去重键，必须按模板行区分
+            const outKey = tplPeriodKey(r, year);
+            const per = (r[3] === 'T01' || r[3] === 'T07') ? outKey : (String(outKey).startsWith('上') ? '上期' : '本期');
+            let val = periodVal(ext, r, year);
             if (val === null || val === undefined) continue;
+            // H01/H02：PDF 中为括号负数（如 (20,168)），gold 全行业约定取正值入库
+            if (code === 'H01' || code === 'H02') {
+              if (typeof val === 'number') val = Math.abs(val);
+              else if (typeof val === 'string') {
+                const n = Number(String(val).replace(/[(),\s]/g, '').replace(/-/g, ''));
+                if (!isNaN(n) && String(val).trim() !== '') val = n;
+              }
+            }
             // 机械匹配可疑值（行名降级匹配，多列表可能取错列）不入库：宁可缺失不误导，等待模式一或人工核
             if (ext._suspicious && !ext._aiDirect) {
               suspicious.push({ code, 指标名称: r[6], 行名: ext['行名'] || '（未提供）', 值: val, 提示: '可疑匹配未入库' });

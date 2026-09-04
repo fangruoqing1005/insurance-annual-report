@@ -3,17 +3,34 @@
 import { chat, parseJSON } from './deepseek.js';
 
 // 报表定位关键词（手册 §4.1）
+// 注意：必须用"唯一短语"精确定位——宽泛词（如"合同服务边际""业务及管理费"）会命中会计政策文本页（p115-130），
+// 导致主聚集区选错页段、模型在政策页输出空行、白扫全部页。以下短语均已用国寿 2025 年报验证唯一命中。
 export const TABLE_KEYWORDS = {
   T01: ['合并资产负债表'],
   T02: ['合并利润表'],
-  T03: ['保险合同负债余额调节', '负债余额调节表'],
-  T04: ['履约现金流量', '合同服务边际', '履约现金流和合同服务边际'],
-  T05: ['初始确认', '当期初始确认的影响'],
-  T06: ['保险服务收入'],
-  T07: ['合同服务边际', '修正追溯', '公允价值法', '过渡'],
-  T08: ['业务及管理费'],
-  T09: ['折现率'],
-  T10: ['非金融风险调整', '置信水平']
+  T03: ['负债余额调节表'],
+  T04: ['签发的保险合同的履约现金流量和合同服务边际余额调节表'],
+  T05: ['签发的保险合同的当期初始确认的影响'],
+  T06: ['预计当期发生的赔款及其他相关费用'],
+  T07: ['未采用保费分配法计量的保险合同的合同服务边际余额调节表'],
+  T08: ['计入未到期责任负债的保险获取现金流量'],
+  T09: ['折现率假设'],
+  T10: ['置信区间法']
+};
+
+// 模型可见的真实报表名（用于 AI 判断与 mergePageResults 标题过滤）
+// 与定位关键词分离：定位用唯一短语（可能很长），模型判断用年报实际表名/注释标题
+export const TABLE_REAL_NAMES = {
+  T01: '合并资产负债表',
+  T02: '合并利润表',
+  T03: '未到期责任负债和已发生赔款负债余额调节表',
+  T04: '签发的保险合同的履约现金流量和合同服务边际余额调节表',
+  T05: '签发的保险合同的当期初始确认的影响',
+  T06: '保险服务收入',
+  T07: '未采用保费分配法计量的保险合同的合同服务边际余额调节表',
+  T08: '业务及管理费',
+  T09: '折现率假设',
+  T10: '非金融风险调整'
 };
 
 // 单位换算：披露单位 → 亿元
@@ -130,17 +147,18 @@ ${indicatorLines}
 ${sliceText}
 
 【提取要点】
-1. 先判断本页是否为"${tableName}"（或其续表）：不是则 _title 填实际报表名，rows 返回 []。
-2. **把本页表格的每一行数据都列出来（行提取）**：行名保留 PDF 原文，带"减：""其中：""四、"前缀的也要列。每行的数值按表头列名组织（多列表如"非亏损部分/亏损部分/已发生赔款负债/合计"、单列表如"2025年度/2024年度"）。
-3. **"期间"字段 = 报表期间（本期/上期），不是余额时点**：本页表头/标题含"2025年1月1日"或"2025年12月31日"→"本期"；含"2024年1月1日"或"2024年12月31日"→"上期"。行名里的"期初/期末"（如"2025年1月1日的保险合同负债"）是余额时点语义，不要写进"期间"字段。单列表分别填 本期/上期；本页只有一列时另一期间填 null——严禁因缺一列放弃该行。
-4. 未找到的指标行：不列即可。整张表未披露：rows 返回 []，_title 填实际表名。
-5. 数值为数字（去千分位、括号表负数）；文本值（折现率区间、置信水平）原样字符串。
-6. 只输出 JSON，不要解释文字。
+1. 先判断本页是否为"${tableName}"（或其续表）：不是则 _title 填实际报表名，rows 返回 []。**只提取目标报表（及其续表）的数据行；本页其他报表/注释/正文的行一律不要输出**。
+2. **把目标报表的每一行数据都列出来（行提取）**：行名保留 PDF 原文，带"减：""其中：""四、"前缀的也要列。无数值的分组/栏目标题行（如"未采用保费分配法计量的合同"）不要输出。
+3. **"期间"字段 = 报表期间（本期/上期），不是余额时点**：本页表头/标题含报告年度（如"2025年1月1日""2025年12月31日""2025年度"）→"本期"；含上一年度（2024年）→"上期"。行名里的"期初/期末"（如"2025年1月1日的保险合同负债"）是余额时点语义，不要写进"期间"字段。
+4. **双年度列**：若同一行名下有两组年度列（如"2025年度"与"2024年度"各含相同子列），输出两个行对象：行名相同，一个"期间"="本期"（"列"取当年组各子列），一个"期间"="上期"（"列"取上年组各子列）。单列表（只有"2025年度/2024年度"两列）直接填 本期/上期 字段；本页只有一列时另一期间填 null——严禁因缺一列放弃该行。
+5. 未找到的指标行：不列即可。整张表未披露：rows 返回 []，_title 填实际表名。
+6. 数值为数字（去千分位、括号表负数、破折号"–"记 null）；文本值（折现率区间、置信水平）原样字符串。
+7. 只输出 JSON，不要解释文字。
 
 【输出要求】
-{"_title": "合并利润表", "rows": [{"行名": "保险服务收入", "本期": 214136, "上期": 208161, "披露单位": "百万元"}, {"行名": "2025年1月1日的保险合同负债", "期间": "本期", "列": {"非亏损部分": 5687512, "亏损部分": 67105, "已发生赔款负债": 34839, "合计": 5789456}, "披露单位": "百万元"}]}
+{"_title": "合并利润表", "rows": [{"行名": "保险服务收入", "本期": 214136, "上期": 208161, "披露单位": "百万元"}, {"行名": "未来现金流入现值的估计", "期间": "本期", "列": {"非亏损合同": -674725, "亏损合同": -104748, "合计": -779473}, "披露单位": "百万元"}, {"行名": "未来现金流入现值的估计", "期间": "上期", "列": {"非亏损合同": -699363, "亏损合同": -112729, "合计": -812092}, "披露单位": "百万元"}]}
 - 每行对象：行名（必填）+ 披露单位（必填）+ 本期/上期（单列表，缺填 null）+ "列"（多列表，可选，键=表头列名，值=该行该列数值）+ "期间"（可选，**只填"本期"或"上期"**，按表头年份判断）
-- **多列表务必输出"列"结构（每个列名对应一个值），不要只给一个数字**；单列表输出 本期/上期 即可
+- **多列表务必输出"列"结构（每个列名对应一个值），不要只给一个数字**；单列表输出 本期/上期 即可；双年度多列表按要点4拆成两行
 - 严禁漏行：所有数据行（含小计/合计/其中行）都要列出，行名保留原文
 - 输出里不得出现除 _title 和 rows 外的顶层 key`;
 
@@ -231,30 +249,111 @@ export function rowNameMatches(rowName, indName) {
   return r === i || r.startsWith(i) || i.startsWith(r);
 }
 
+// —— 期间规范化（公共）：日期 → 规范期间键 ——
+// 键空间：本期初/本期末/上期初/上期末/本期/上期
+// 依据：行名/线索中的日期（"2025年1月1日"→本期初、"2025年12月31日"→本期末、"2024年1月1日"→上期初、"2024年12月31日"→上期末）
+const DATE_RE = /(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/;
+function canonDate(y, mo, d, reportYear) {
+  if (!reportYear) return null;
+  if (y === reportYear) return (mo === 1 && d === 1) ? '本期初' : (mo === 12 && d === 31) ? '本期末' : '本期';
+  if (y === reportYear - 1) return (mo === 1 && d === 1) ? '上期初' : (mo === 12 && d === 31) ? '上期末' : '上期';
+  return y < reportYear ? '上期' : '本期';
+}
+const TPL_PERIOD_ALIAS = { '期初': '本期初', '期末': '本期末', '年度': '本期', '上期初': '上期初', '上期末': '上期末' };
+// 模板行的目标期间键：优先来源线索/关键词中的日期（如"2025年1月1日的保险合同负债…"、"…-2025年12月31日"），其次期间字段（含日期型期间如"2025年12月31日"）
+export function tplPeriodKey(r, year) {
+  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
+  for (const f of [r[7], r[8]]) {
+    const m = String(f || '').match(DATE_RE);
+    if (m) { const c = canonDate(+m[1], +m[2], +m[3], reportYear); if (c) return c; }
+  }
+  const per = String(r[9] || '');
+  const mp = per.match(DATE_RE);
+  if (mp) { const c = canonDate(+mp[1], +mp[2], +mp[3], reportYear); if (c) return c; }
+  return TPL_PERIOD_ALIAS[per] || per || '本期';
+}
+
 // 用后端算法把模板指标匹配到提取出的行（确定性匹配，避免模型编码错乱）
 // indicators: 模板行（含 指标编号/指标名称/关键词/期间/计量单位-披露）
-// rows: 提取的行 [{行名, 本期, 上期, 披露单位}]
-// 返回 { code: { 本期, 上期, 披露单位, 行名, 来源 } }（含可疑项 _suspicious 标记）
+// rows: 提取的行 [{行名, 本期, 上期, 期间, 列, 披露单位}]
+// 返回 { code: { 本期初/本期末/上期初/上期末/本期/上期: 值, 披露单位, 行名, 来源 } }（含可疑项 _suspicious 标记）
+// 设计要点（2026-08 国寿 163 行修复）：
+//  ① 值按"规范期间键"存放，合并时首次非空获胜（文档序=本期页在前），杜绝上期值覆盖本期槽位
+//  ② 多列行可被不同"列"的指标共享（C04亏损部分/C06合计同用一行）；同列同表内独占（非PAA/PAA分流）
+//  ③ 线索日期与行名日期一致 → 加分，C01期初/C05期末等同名行确定性分流
+//  ④ 多列行只覆盖一个期间：行期间键 ≠ 模板目标键 → 排除候选
+//  ⑤ 列选择先剔除行名部分再匹配（"已发生赔款负债相关履约现金流量变动-合计"→取合计列，不被行名中的列名干扰）
 export function matchIndicators(indicators, rows, year) {
   const out = {};
   const usedRows = new Set();
-  // 行对象期间判定：优先行名年份（"2025年1月1日"→本期、"2024年1月1日"→上期），其次模型"期间"字段
-  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '');
-  const rowPeriod = (row) => {
-    const ym = String(row['行名'] || '').match(/(20\d{2})年/);
-    if (ym) {
-      const ry = parseInt(ym[1]);
-      if (reportYear && ry < reportYear) return '上期';
-      return '本期';
-    }
+  const usedCols = new Map(); // idx → Set(列名)：同一行的不同列可被不同指标取用
+  const rowOwner = new Map(); // idx → 指标编号：同编号不同期间模板行可复用同一行
+  const reportYear = parseInt(String(year || '').match(/(20\d{2})/)?.[1] || '') || null;
+
+  // 行对象的期间键：行名日期优先（期初/期末语义），其次"期间"字段（模型标注或页级推断）
+  const rowDateOf = (row) => {
+    const m = String(row['行名'] || '').match(DATE_RE);
+    return m ? { y: +m[1], mo: +m[2], d: +m[3] } : null;
+  };
+  const rowKeyOf = (row) => {
+    const d = rowDateOf(row);
+    if (d) { const c = canonDate(d.y, d.mo, d.d, reportYear); if (c) return c; }
     return String(row['期间'] || '').includes('上') ? '上期' : '本期';
   };
+  const clueDateOf = (r) => {
+    for (const f of [r[7], r[8]]) {
+      const m = String(f || '').match(DATE_RE);
+      if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
+    }
+    return null;
+  };
+  // 无任何数值的行（分组标题，如"未采用保费分配法计量的合同"）不参与匹配
+  const isEmptyRow = (row) => {
+    if (row['列'] && typeof row['列'] === 'object') {
+      return Object.values(row['列']).every(v => v === null || v === undefined || v === '');
+    }
+    return (row['本期'] ?? null) === null && (row['上期'] ?? null) === null;
+  };
+
+  // 列选择：优先用"线索去掉行名后的剩余部分"（列线索段），避免行名中的列名词干扰
+  const COL_NAMES = ['非亏损部分', '亏损部分', '已发生赔款负债', '合同服务边际', '未来现金流量现值', '非金融风险调整', '非亏损合同', '亏损合同', '合计', '未来现金流入现值', '保险获取现金流量', '税后净额'];
+  // 线索特征词 ↔ 列键特征词（线索含左词 → 找含右词的列键；"其他方法"↔"其余合同"为过渡方法表特例）
+  const COL_TOKENS = [
+    ['非亏损合同', '非亏损合同'], ['非亏损部分', '非亏损部分'], ['亏损合同', '亏损合同'], ['亏损部分', '亏损部分'],
+    ['已发生赔款负债', '已发生赔款负债'], ['未来现金流入现值', '未来现金流入现值'],
+    ['保险获取现金流量', '保险获取现金流量'], ['非金融风险调整', '非金融风险调整'],
+    ['未来现金流量现值', '未来现金流量现值'], ['合同服务边际', '合同服务边际'],
+    ['修正追溯', '修正追溯'], ['公允价值', '公允价值'], ['其他方法', '其余合同'], ['其余合同', '其余合同'],
+    ['获取费用', '获取费用'], ['维持费用', '维持费用'],
+    ['小计', '小计'], ['合计', '合计']
+  ];
+  const hasVal = (v) => v !== null && v !== undefined && v !== '';
+  const pickCol = (cols, clue) => {
+    const keys = Object.keys(cols || {});
+    if (!keys.length || !clue) return null;
+    // ① 线索直接含列名
+    let k = COL_NAMES.find(c => clue.includes(c) && hasVal(cols[c]));
+    if (k) return k;
+    // ② 特征词：先精确列键，再包含匹配（排除"非"+特征词的反义列键，如 b=亏损部分 不匹配 非亏损部分）
+    for (const [a, b] of COL_TOKENS) {
+      if (!clue.includes(a)) continue;
+      k = keys.find(key => key === b && hasVal(cols[key]));
+      if (k) return k;
+      k = keys.find(key => key.includes(b) && !key.includes('非' + b) && hasVal(cols[key]));
+      if (k) return k;
+    }
+    // ③ 列键整体出现在线索中（如日期列键"2025年12月31日"）
+    k = keys.find(key => key.length >= 4 && clue.includes(key));
+    return k || null;
+  };
+
   const candidatesOf = (r) => {
     const code = r[5];
     const indName = r[6];
     const keyword = String(r[8] || '');
+    const tKey = tplPeriodKey(r, year);
+    const clueDate = clueDateOf(r);
     // 来源线索（模板 r[7]）：含 PDF 实际行名（如"2025年1月1日的保险合同负债-亏损部分-未采用PAA"）
-    // 取行名主体段：去日期/期间/合并后缀后的第一段
     const srcCore = String(r[7] || '')
       .replace(/\d{4}年\d{1,2}月\d{1,2}日/g, '')
       .replace(/[-（()）]/g, '')
@@ -262,13 +361,19 @@ export function matchIndicators(indicators, rows, year) {
       .split(/[-·]/)[0] || '';
     const cands = [];
     rows.forEach((row, idx) => {
-      if (usedRows.has(idx)) return;
       const rowName = row['行名'];
-      if (!rowName) return;
+      if (!rowName || isEmptyRow(row)) return;
+      // 已被占用：单列行仅同编号（另一期间模板行）可复用；多列行需取未用过的列
+      if (usedRows.has(idx)) {
+        if (rowOwner.get(idx) !== code) {
+          if (!row['列']) return;
+          const cn = pickCol(row['列'], colClue(r, row));
+          if (!cn || (usedCols.get(idx) || new Set()).has(cn)) return;
+        }
+      }
       const rn = normRowName(rowName);
-      const rnDate = normDateRow(rowName); // 去日期（"2025年1月1日的保险合同负债"→"保险合同负债"）
+      const rnDate = normDateRow(rowName);
       const inN = normRowName(indName);
-      // 关键词核心（去掉"-合并-本期"等后缀）
       const kwCore = normRowName(keyword.replace(/-合并-.*$/, '').replace(/-本期.*$/, '').replace(/-上期.*$/, ''));
       const sCore = normDateRow(srcCore);
       if (!rn || !inN) return;
@@ -278,54 +383,73 @@ export function matchIndicators(indicators, rows, year) {
       else if (inN.startsWith(rn)) score = 2;
       else if (kwCore && (rn === kwCore || rn.startsWith(kwCore))) score = 3;
       else if (sCore && (rnDate === sCore || rnDate.startsWith(sCore) || sCore.startsWith(rnDate))) score = 3;
+      else if (kwCore && kwCore.includes(rn) && rn.length >= 2 && kwCore.length > rn.length + 2) score = 3; // 如"业务及管理费合计"⊃"合计"
       else if (rn.includes(inN) && !rn.startsWith('摊回') && !rn.startsWith('减') && !rn.startsWith('其中')) score = 1;
-      if (score >= 0) cands.push({ idx, row, score });
+      // 线索日期与行名日期完全一致 → 强加分（同名行确定性分流：期初/期末、本期/上期）
+      const rd = rowDateOf(row);
+      if (clueDate && rd && clueDate.y === rd.y && clueDate.mo === rd.mo && clueDate.d === rd.d) score = Math.max(score, 0) + 3;
+      if (score < 0) return;
+      // 多列行只覆盖一个期间：期间键不符的候选排除（防上期页行混入本期指标）
+      if (row['列'] && rowKeyOf(row) !== tKey) return;
+      cands.push({ idx, row, score });
     });
     cands.sort((a, b) => b.score - a.score);
     return { code, cands };
   };
-  // 从行对象取值：多列表按来源线索列名选列；单列表用本期/上期
-  // 返回 { 本期, 上期, _colMatched: bool }
-  const COL_NAMES = ['非亏损部分', '亏损部分', '已发生赔款负债', '合同服务边际', '未来现金流量现值', '非金融风险调整', '非亏损合同', '亏损合同', '合计', '未来现金流入现值', '保险获取现金流量', '税后净额'];
-  const rowValue = (row, r7) => {
-    const clue = String(r7 || '');
-    // 从行对象的实际列键中，找来源线索提到的列名（顺序=常用列优先级）
-    const colName = row['列'] ? (COL_NAMES.find(c => clue.includes(c) && row['列'][c] !== undefined) || null) : null;
-    const per = rowPeriod(row) === '上期' ? '上期' : '本期';
-    if (colName) {
-      return per === '上期'
-        ? { 本期: null, 上期: row['列'][colName], _colMatched: true }
-        : { 本期: row['列'][colName], 上期: null, _colMatched: true };
-    }
-    if (row['列']) {
+  // 列线索：优先"来源线索去掉行名"的剩余段（列名部分），避免行名中含列名词的干扰
+  const colClue = (r, row) => {
+    const clue = String(r[7] || '');
+    const rnRaw = String(row['行名'] || '');
+    if (rnRaw && clue.includes(rnRaw)) return clue.replace(rnRaw, '');
+    return clue;
+  };
+  // 从行对象取值：按行期间键组织（多列行选列；单列行直接取本期/上期字段）
+  // 破折号"–"在已确定列的调节表中视为 0（如 PAA 表 LC 计息为"–"）
+  const rowValue = (row, r) => {
+    const key = rowKeyOf(row);
+    if (row['列'] && typeof row['列'] === 'object') {
+      const colName = pickCol(row['列'], colClue(r, row)) || pickCol(row['列'], String(r[7] || ''));
+      if (colName) {
+        let v = row['列'][colName];
+        if (!hasVal(v) || v === '–' || v === '-' || v === '—') v = 0;
+        return { [key]: v, _colMatched: true };
+      }
       // 有列但线索列名未匹配：取非空列值（一般"合计"在最后），标记可疑
-      const vals = Object.values(row['列']).filter(v => v !== null && v !== undefined && v !== '');
+      const vals = Object.values(row['列']).filter(hasVal);
       const v = vals.length ? vals[vals.length - 1] : null;
-      return per === '上期'
-        ? { 本期: null, 上期: v, _colMatched: false }
-        : { 本期: v, 上期: null, _colMatched: false };
+      return { [key]: v, _colMatched: false };
     }
     return { 本期: row['本期'] ?? null, 上期: row['上期'] ?? null, _colMatched: true };
   };
   // 第一轮：只取高置信候选（score>=3），保证"债权投资"不会抢"其他债权投资"
-  // 注意：同一指标编号有"本期/上期"两条模板行 → 合并期间值而非覆盖
+  // 同一指标编号有多个期间模板行 → 按期间键合并，首次非空获胜（文档序=本期页在前）
   const pending = [];
   for (const r of indicators) {
     const { code, cands } = candidatesOf(r);
     const high = cands.find(c => c.score >= 3);
     if (high) {
       usedRows.add(high.idx);
+      if (!rowOwner.has(high.idx)) rowOwner.set(high.idx, code);
       const row = high.row;
-      const v = rowValue(row, r[7]);
+      const v = rowValue(row, r);
+      if (row['列']) {
+        const cn = pickCol(row['列'], colClue(r, row)) || pickCol(row['列'], String(r[7] || ''));
+        if (cn) {
+          if (!usedCols.has(high.idx)) usedCols.set(high.idx, new Set());
+          usedCols.get(high.idx).add(cn);
+        }
+      }
       const prev = out[code] || {};
-      out[code] = {
-        本期: v['本期'] ?? prev['本期'] ?? null,
-        上期: v['上期'] ?? prev['上期'] ?? null,
-        披露单位: row['披露单位'] || prev['披露单位'] || r[10] || '',
-        行名: row['行名'],
-        来源: row['来源'] || prev['来源'] || `${r[3]} ${r[4]}`,
-        _suspicious: (prev['_suspicious'] || false) || !v['_colMatched']
-      };
+      const merged = { ...prev };
+      for (const k of Object.keys(v)) {
+        if (k.startsWith('_')) continue;
+        if (prev[k] === null || prev[k] === undefined) merged[k] = v[k];
+      }
+      merged['披露单位'] = prev['披露单位'] || row['披露单位'] || r[10] || '';
+      merged['行名'] = prev['行名'] || row['行名'];
+      merged['来源'] = prev['来源'] || row['来源'] || `${r[3]} ${r[4]}`;
+      merged['_suspicious'] = (prev['_suspicious'] || false) || !v['_colMatched'];
+      out[code] = merged;
     } else if (cands.length) {
       pending.push({ r, cands });
     }
@@ -338,16 +462,18 @@ export function matchIndicators(indicators, rows, year) {
     const best = cands[0];
     if (!best) continue;
     usedRows.add(best.idx);
+    if (!rowOwner.has(best.idx)) rowOwner.set(best.idx, code);
     const row = best.row;
-    const v = rowValue(row, r[7]);
-    out[code] = {
-      本期: v['本期'],
-      上期: v['上期'],
-      披露单位: row['披露单位'] || r[10] || '',
-      行名: row['行名'],
-      来源: row['来源'] || `${r[3]} ${r[4]}`,
-      _suspicious: best.score < 3 || !v['_colMatched']
-    };
+    const v = rowValue(row, r);
+    const merged = {};
+    for (const k of Object.keys(v)) {
+      if (!k.startsWith('_')) merged[k] = v[k];
+    }
+    merged['披露单位'] = row['披露单位'] || r[10] || '';
+    merged['行名'] = row['行名'];
+    merged['来源'] = row['来源'] || `${r[3]} ${r[4]}`;
+    merged['_suspicious'] = best.score < 3 || !v['_colMatched'];
+    out[code] = merged;
   }
   return out;
 }
