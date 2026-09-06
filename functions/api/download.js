@@ -1,11 +1,13 @@
 // /api/download — PDF 下载/上传管理
 // GET  ?company=&year=                    — 查询某公司 PDF 是否已存在【公开】
+// DELETE {company, year}                  — 删除存储中的 PDF【需管理密码】
+// DELETE {companies:[...], year}          — 批量删除【需管理密码】
 // POST {company, year, url?, fullName?}   — 有 url：服务端抓取存存储；无 url：先查 sources.json，
 //                                           再没有则走中保协信息披露系统自动搜索+下载【需管理密码】
 // POST {companies:[...], year}            — 批量下载（并发3）：静态地址优先，其余走中保协，每家公司独立结果【需管理密码】
 // POST multipart（file 字段）             — 直接上传 PDF 文件存存储【需管理密码】
 import { route, ok, fail, checkAuth } from '../_lib/auth.js';
-import { exists, readJSON, storePut, storeGetBytes, storeList } from '../_lib/db.js';
+import { exists, readJSON, storePut, storeGetBytes, storeList, storeDelete } from '../_lib/db.js';
 import { createIachinaClient, fetchAnnualPdf } from '../_lib/iachina.js';
 
 // ArrayBuffer → base64（分块避免栈溢出；Workers 的 btoa 可用）
@@ -96,7 +98,7 @@ async function downloadOne(env, { company, fullName, year, url }, sources, withB
 
 export async function onRequest({ request, env }) {
   return route(request, env, {
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'DELETE'],
     handler: async (req) => {
       if (req.method === 'GET') {
         const url = new URL(req.url);
@@ -138,6 +140,32 @@ export async function onRequest({ request, env }) {
       // ===== 写操作需管理密码 =====
       if (!checkAuth(req, env)) {
         return fail('未授权：请先在页面设置管理密码', 401);
+      }
+
+      // ===== DELETE：删除 PDF（单公司或批量）=====
+      if (req.method === 'DELETE') {
+        const body = await req.json().catch(() => ({}));
+        const year = String(body.year || '2025年度').trim();
+        const sources = (await readJSON(env, env.SOURCES_KEY || 'sources.json', {})) || {};
+        const list = Array.isArray(body.companies)
+          ? body.companies.map(c => normalizeCompany(String(c || '').trim(), sources)).filter(Boolean)
+          : [normalizeCompany(String(body.company || '').trim(), sources)].filter(Boolean);
+        if (!list.length) return fail('缺少 company / companies 参数');
+        const prefix = env.PDF_PREFIX || 'pdfs/';
+        const results = [];
+        for (const company of [...new Set(list)]) {
+          const key = `${prefix}${company}_${year}.pdf`;
+          const had = await exists(env, key);
+          if (!had) {
+            results.push({ company, year, deleted: 0, message: '云端不存在该 PDF' });
+            continue;
+          }
+          const done = await storeDelete(env.STORE, key);
+          results.push(done
+            ? { company, year, deleted: 1, pdfKey: key }
+            : { company, year, deleted: 0, error: '存储删除失败（检查 Cloudflare 存储绑定）' });
+        }
+        return ok({ results, deleted: results.reduce((s, r) => s + (r.deleted || 0), 0) });
       }
 
       const contentType = req.headers.get('Content-Type') || '';

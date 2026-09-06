@@ -193,3 +193,15 @@ export async function storeList(store, prefix = '') {
     return [];
   }
 }
+
+// 删除键：返回 boolean（KV/R2 通用）
+export async function storeDelete(store, key) {
+  if (!store) return false;
+  try {
+    await store.delete(key);
+    return true;
+  } catch (e) {
+    console.error('storeDelete error', e);
+    return false;
+  }
+}
