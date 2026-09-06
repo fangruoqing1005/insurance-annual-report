@@ -1340,6 +1340,9 @@ body {
       <div class="nav-item" id="navAsk">
         <i class="icon fa-solid fa-robot"></i><span>问问 Agent</span>
       </div>
+      <div class="nav-item" id="navReport">
+        <i class="icon fa-solid fa-pen-nib"></i><span>年度报告</span>
+      </div>
       <div class="nav-item disabled" style="margin-top: 8px;">
         <i class="icon fa-solid fa-gear"></i><span>大模型设置</span>
         <span class="badge">待开发</span>
@@ -1925,6 +1928,77 @@ body {
       </div>
     </div>
 
+    <!-- ===== 年度报告（RN2 图文写作台） ===== -->
+    <div class="page-view" id="reportView" style="display:none;padding:0;">
+      <style>
+        .rn2 { font-family: 'Noto Sans SC','Microsoft YaHei',sans-serif; background: var(--c-bg); min-height: calc(100vh - 62px); }
+        .rn2 * { box-sizing: border-box; }
+        .rn2-bar { position: sticky; top: 0; z-index: 20; background: var(--c-navy); color: #fff; padding: 9px 18px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(30,42,64,.22); }
+        .rn2-bar b { font-size: 15px; letter-spacing: .5px; margin-right: 4px; }
+        .rn2-bar .tip { font-size: 11.5px; opacity: .82; }
+        .rn2-bar select { background: #fff; color: var(--c-navy-dark); border: none; border-radius: 5px; padding: 5px 6px; font-size: 12px; min-width: 96px; cursor: pointer; }
+        .rn2-btn { background: var(--c-navy-light); color: var(--c-navy-dark); border: 1px solid transparent; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+        .rn2-btn:hover { background: var(--c-navy); color: #fff; }
+        .rn2-btn.strong { background: var(--c-navy); color: #fff; }
+        .rn2-btn.strong:hover { background: var(--c-navy-dark); }
+        .rn2-main { display: flex; align-items: flex-start; min-height: calc(100vh - 116px); }
+        .rn2-left { width: 36%; min-width: 330px; border-right: 1px solid var(--c-border); display: flex; flex-direction: column; background: var(--c-surface); position: sticky; top: 52px; height: calc(100vh - 172px); }
+        .rn2-left .cap { font-size: 12px; color: var(--c-text-muted); padding: 8px 14px 2px; font-weight: 600; }
+        .rn2-left textarea { flex: 1; resize: none; border: none; background: transparent; padding: 10px 14px; font-size: 13px; line-height: 1.95; font-family: inherit; color: var(--c-text-primary); outline: none; }
+        .rn2-hint { font-size: 11.5px; color: var(--c-text-muted); padding: 6px 14px 10px; line-height: 1.7; border-top: 1px dashed var(--c-border); }
+        .rn2-hint code { background: var(--c-navy-light); border-radius: 3px; padding: 0 5px; }
+        .rn2-right { flex: 1; min-width: 0; overflow: auto; background: var(--c-bg); padding: 18px 24px 60px; }
+        .rn2-paper { max-width: 1080px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 34px 46px; min-height: 72vh; box-shadow: 0 3px 14px rgba(40,50,70,.09); }
+        .rn2-paper h1.rn2-h { font-size: 22px; color: var(--c-navy-dark); border-left: 7px solid var(--c-navy); padding-left: 13px; margin: 30px 0 6px; font-weight: 700; }
+        .rn2-paper h2.rn2-h { font-size: 19px; color: var(--c-navy-dark); margin: 24px 0 4px; padding-left: 10px; border-left: 5px solid var(--c-navy); }
+        .rn2-paper h3.rn2-h { font-size: 16px; color: var(--c-navy); margin: 18px 0 2px; }
+        .rn2-paper h4.rn2-h { font-size: 14.5px; color: #8a6d2f; margin: 14px 0 2px; }
+        .rn2-paper p.rn2-p { margin: 11px 0; font-size: 14.5px; line-height: 2.05; text-align: justify; color: var(--c-text-primary); }
+        .rn2-fig { margin: 18px 0; }
+        .rn2-figcap { display: inline-block; font-size: 11.5px; color: var(--c-navy-dark); background: var(--c-navy-light); border: 1px solid var(--c-border); padding: 2px 12px; border-radius: 12px; margin-bottom: 6px; }
+        .rn2-empty { color: var(--c-text-muted); font-size: 13px; text-align: center; padding: 40px 16px; line-height: 2; }
+        .rn2-figbox { width: 100%; height: 420px; }
+        .rn2-figbox.wf { height: auto; }
+        .rn2-figbox.table { height: auto; }
+        .rn2-figbox table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .rn2-figbox th, .rn2-figbox td { border: 1px solid var(--c-border); padding: 6px 9px; text-align: right; white-space: nowrap; }
+        .rn2-figbox th { background: var(--c-navy-light); color: var(--c-navy-dark); text-align: center; position: static; }
+        .rn2-paper .pub { font-size: 12px; color: var(--c-text-muted); margin-bottom: 14px; }
+        @media (max-width: 1024px) {
+          .rn2-main { flex-direction: column; }
+          .rn2-left { width: 100%; min-width: 0; position: static; height: 300px; border-right: none; border-bottom: 1px solid var(--c-border); }
+          .rn2-right { width: 100%; }
+        }
+      </style>
+      <div class="rn2">
+        <div class="rn2-bar">
+          <b>年度报告 · 图文写作台</b>
+          <span class="tip">写正文 → 智能配图 → 复制到 Word / 下载 HTML</span>
+          <select id="rn2Type" title="图内公司集合（组别）"></select>
+          <select id="rn2Rep" title="报告期"></select>
+          <select id="rn2Chart" title="手动选图（40 张）"></select>
+          <button class="rn2-btn strong" id="rn2Auto">智能配图</button>
+          <button class="rn2-btn" id="rn2Ins">插入所选图</button>
+          <button class="rn2-btn" id="rn2Go">刷新预览</button>
+          <button class="rn2-btn" id="rn2ExH">示例·头部</button>
+          <button class="rn2-btn" id="rn2ExY">示例·银保系</button>
+          <button class="rn2-btn" id="rn2Copy">复制 HTML</button>
+          <button class="rn2-btn" id="rn2Dl">下载 HTML</button>
+          <button class="rn2-btn" id="rn2Clear">清空</button>
+          <button class="rn2-btn" id="rn2Reset">恢复默认报告</button>
+          <button class="rn2-btn" id="rn2Undo" title="撤销最近一次按钮操作（打字误删请用 Ctrl+Z）">撤回</button>
+        </div>
+        <div class="rn2-main">
+          <div class="rn2-left">
+            <div class="cap">正文编辑（图位：插入即生成占位标记，也可手写）</div>
+            <textarea id="rn2Ta" spellcheck="false" placeholder="在此粘贴您的报告段落…&#10;&#10;然后点「智能配图」：系统按 利润/税率/净利润/保险服务业绩/投资服务业绩/CSM/折现率 等关键词，把对应图表插到句子后面。&#10;&#10;也可以把光标放到正文某处，从上方「手动选图」下拉挑一张点「插入所选图」。&#10;&#10;左侧「组别」决定图里画哪些公司（头部险企/银行系公司…），「报告期」默认最新年度。"></textarea>
+            <div class="rn2-hint">图位格式 <code>【图:利润分析→税前利润、税率及净利润@头部险企】</code>，@后的组别省略则跟随左侧组别。<br>「复制 HTML」会把每张图快照成图片（表格转表格代码）并与正文一起复制，可直接粘贴进 Word。</div>
+          </div>
+          <div class="rn2-right"><div class="rn2-paper" id="rn2Paper"></div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">
       保险公司年报分析工作台 v0.9 · 数据来源：上市保险公司年报 · 仅供参考
     </div>
@@ -2056,7 +2130,7 @@ const state = {
 const appliedState = { periods: [], companies: [] };
 let currentSubPage = 'key-ops';
 let currentExtractSub = 'inject'; // 'inject' | 'shot'
-let currentView = 'overview'; // 'overview' | 'download' | 'extract' | 'database' | 'analysis' | 'discount' | 'ask'
+let currentView = 'overview'; // 'overview' | 'download' | 'extract' | 'database' | 'analysis' | 'discount' | 'ask' | 'report'
 let hasApplied = false;
 
 // ============== View Switch ==============
@@ -2071,6 +2145,7 @@ function switchView(view) {
   const isExtract = view === 'extract';
   const isDiscount = view === 'discount';
   const isAsk = view === 'ask';
+  const isReport = view === 'report';
   document.getElementById('filterBar').style.display = isAnalysis ? 'flex' : 'none';
   document.getElementById('selectedSummary').style.display = isAnalysis ? 'flex' : 'none';
   document.getElementById('chartGrid').style.display = isAnalysis ? 'grid' : 'none';
@@ -2080,6 +2155,7 @@ function switchView(view) {
   document.getElementById('extractView').style.display = isExtract ? 'block' : 'none';
   document.getElementById('discountView').style.display = isDiscount ? 'block' : 'none';
   document.getElementById('askView').style.display = isAsk ? 'block' : 'none';
+  document.getElementById('reportView').style.display = isReport ? 'block' : 'none';
   // 子页面导航：按组控制（进入页面自动展开对应子目录并收起其他组）
   document.querySelectorAll('.nav-group').forEach(g => {
     const grp = g.dataset.group;
@@ -2094,6 +2170,7 @@ function switchView(view) {
   document.getElementById('navAnalysis').classList.toggle('active', isAnalysis);
   document.getElementById('navDiscount').classList.toggle('active', isDiscount);
   document.getElementById('navAsk').classList.toggle('active', isAsk);
+  document.getElementById('navReport').classList.toggle('active', isReport);
   // 智能提取子导航高亮（仅清除 extract 自身子项，避免干扰数据库/数据分析）
   if (isExtract) {
     document.querySelectorAll('.nav-sub[data-sub^="extract-"]').forEach(n => n.classList.remove('active'));
@@ -2111,6 +2188,12 @@ function switchView(view) {
   if (isDownload) renderDownloadView();
   if (isExtract) renderExtractView();
   if (isDiscount) dcLoadRecords();
+  // 年度报告：容器转为可见后再刷新写作台（保证 ECharts 拿到正确宽高）
+  if (isReport) {
+    setTimeout(function () {
+      try { if (window.RN2) window.RN2.refresh(); } catch (e) {}
+    }, 30);
+  }
 }
 
 // ============== Dropdown Logic ==============
@@ -2275,6 +2358,7 @@ function initSidebar() {
   document.getElementById('navAnalysis').addEventListener('click', () => switchView('analysis'));
   document.getElementById('navDiscount').addEventListener('click', () => switchView('discount'));
   document.getElementById('navAsk').addEventListener('click', () => switchView('ask'));
+  document.getElementById('navReport').addEventListener('click', () => switchView('report'));
   document.querySelectorAll('.nav-toggle').forEach(tg => {
     tg.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -3063,9 +3147,10 @@ function fmtTableNum(v, config, idx) {
   return num.toLocaleString('zh-CN', {maximumFractionDigits: 2});
 }
 
-function renderTableChart(config, data, container) {
+function renderTableChart(config, data, container, reportPeriods) {
   // 多报告期时行/列标签带报告期
-  const multiPeriod = appliedState.periods && appliedState.periods.length > 1;
+  const multiPeriod = reportPeriods ? reportPeriods.length > 1
+    : (appliedState.periods && appliedState.periods.length > 1);
   const labelOf = d => multiPeriod ? (d.company + '\n' + d.reportPeriod) : d.company;
   // 报告期排序（2024年度 < 2025年度）
   const rps = data.map(d => d.reportPeriod).filter((v, i, a) => a.indexOf(v) === i).sort();
@@ -3181,35 +3266,38 @@ function getYAxis(config, withPctAxis) {
   return [{ type: 'value', name: unit }];
 }
 
-function renderChart(config) {
-  const el = document.getElementById(config.id);
+function renderChart(config, opts) {
+  opts = opts || {};
+  const el = opts.el || document.getElementById(config.id);
   if (!el) return;
 
-  const reportPeriods = (appliedState.periods && appliedState.periods.length) ? appliedState.periods : ['2025年度'];
+  const reportPeriods = (opts.periods && opts.periods.length) ? opts.periods
+    : ((appliedState.periods && appliedState.periods.length) ? appliedState.periods : ['2025年度']);
+  const companies = (opts.companies && opts.companies.length) ? opts.companies : appliedState.companies;
 
   // 表格类型
   if (config.chartType === 'table') {
-    const data = filterChartData(config, appliedState.companies, reportPeriods);
+    const data = filterChartData(config, companies, reportPeriods);
     const hasData = data.some(d => config.indicators.some(ind => d.values[ind] !== null));
     if (!hasData) {
-      renderEmpty(config.id);
+      renderEmpty(config.id, el, '所选公司暂无数据');
       return;
     }
-    renderTableChart(config, data, el);
+    renderTableChart(config, data, el, reportPeriods);
     return;
   }
 
-  const data = filterChartData(config, appliedState.companies, reportPeriods);
+  const data = filterChartData(config, companies, reportPeriods);
   const hasData = data.some(d => config.indicators.some(ind => d.values[ind] !== null));
 
   if (!hasData) {
-    renderEmpty(config.id);
+    renderEmpty(config.id, el, '所选公司暂无数据');
     return;
   }
 
   // ===== 瀑布图：逐公司逐报告期渲染独立瀑布 =====
   if (config.chartType === 'waterfall') {
-    renderWaterfallChart(config, data, el);
+    renderWaterfallChart(config, data, el, reportPeriods);
     return;
   }
 
@@ -3306,7 +3394,7 @@ function renderChart(config) {
 }
 
 // 瀑布图：每家公司×报告期渲染一个独立小瀑布图（垂直排列）
-function renderWaterfallChart(config, data, container) {
+function renderWaterfallChart(config, data, container, reportPeriods) {
   // 清除旧实例
   if (container._wfInstances) {
     container._wfInstances.forEach(inst => { try { inst.dispose(); } catch(e) {} });
@@ -3316,7 +3404,7 @@ function renderWaterfallChart(config, data, container) {
 
   const validData = data.filter(d => config.indicators.some(ind => d.values[ind] !== null));
   if (validData.length === 0) {
-    renderEmpty(config.id);
+    renderEmpty(config.id, container, '所选公司暂无数据');
     return;
   }
 
@@ -3327,7 +3415,8 @@ function renderWaterfallChart(config, data, container) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex;flex-direction:column;gap:14px;';
 
-  const multiPeriod = appliedState.periods && appliedState.periods.length > 1;
+  const multiPeriod = reportPeriods ? reportPeriods.length > 1
+    : (appliedState.periods && appliedState.periods.length > 1);
   validData.forEach(d => {
     const title = multiPeriod ? `${d.company}（${d.reportPeriod}）` : d.company;
     const sub = document.createElement('div');
@@ -3352,13 +3441,13 @@ function renderWaterfallChart(config, data, container) {
   }
 }
 
-function renderEmpty(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const msg = !hasApplied
+function renderEmpty(id, el, msgOverride) {
+  const t = el || document.getElementById(id);
+  if (!t) return;
+  const msg = msgOverride || (!hasApplied
     ? '请选择公司并点击「生成图表」'
-    : '所选公司暂无数据';
-  el.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9B9B9B;font-size:13px;">${msg}</div>`;
+    : '所选公司暂无数据');
+  t.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#9B9B9B;font-size:13px;">${msg}</div>`;
 }
 
 function buildChartCards() {
@@ -5266,6 +5355,8 @@ function askFmt(v) {
   return (+v).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' 亿元';
 }
 function askAnswer(q) {
+  // 报告知识库优先（由「年度报告」页注入：覆盖数据问答未及的政策/口径/行业背景类问题）
+  try { if (window.askReportKB) { const kbHit = window.askReportKB(q); if (kbHit) return kbHit; } } catch (e) {}
   const year = (q.match(/20\d{2}/) || [])[0];
   const yearStr = year ? year + '年度' : (REPORT_PERIODS[REPORT_PERIODS.length - 1] || '2025年度');
   const companies = COMPANIES.filter(c => c.has_data);
@@ -5588,6 +5679,434 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (hasApplied) renderCharts();
   });
 });
+</script>
+
+
+<script>
+/* ===== 年度报告页（RN2 写作台 + 报告知识库） ===== */
+var REPORT_DEFAULT = "# 2025年寿险行业新准则同业财报对标分析报告（头部）\n\n新保险合同会计准则实施后，保险机构年报披露要求显著提升，尤其金额类信息披露维度进一步扩充，除财务主表外，大量关键指标需通过报表附注予以披露。受此影响，年报表格及披露字段数量大幅增加，且各市场主体披露口径、文档格式存在较大差异。若采用人工方式批量提取多家公司多期维度指标，不仅工作负担重，还易产生人工录入偏差。针对上述业务痛点，项目组搭建年报分析工作台，实现新准则下年报数据的自动化同业对标分析。\n\n本项目以公司AI创新大赛为契机，7月27日正式启动，整体建设周期约一个月。完整数据处理链路为原始年报下载、数据指标抽取与清洗、指标计算逻辑固化和前端可视化页面开发，全流程嵌入多轮校验，对各环节输出结果进行质量复核。平台通过标准化流程已完成2023-2025年寿险子公司层面新准则年报数据分析、2025半年度和2026半年度集团层面年报数据分析，支撑同业指标的批量对标查询。\n\n受当前技术环境与项目资源约束，平台现阶段仍存在一定客观局限性，后续将持续迭代优化与功能完善。\n\n## （一）新准则行业实施背景\n\n新保险合同会计准则（以下简称IFRS17）从底层重构保险负债计量逻辑，引入合同服务边际CSM、亏损部分LC、保险服务收入、VFA浮动收费模型等核心概念。新金融工具准则（以下简称IFRS9）重构金融资产三分类规则与预期信用损失减值计量模型。根据财政部相关实施安排，保险公司执行新保险合同会计准则时，应当已同步执行新金融工具相关会计准则，避免出现资产、负债计量基础错配。\n\n行业实施新保险合同会计准则的时间节奏分为三档：在境内外同时上市以及在境外上市并采用国际财务报告准则编制财务报表的公司，自2023年1月1日起实施新准则；部分银保系公司、外资公司选择在2024‑2025年度分批提前实施；其余保险公司法定执行时点为2026年1月1日，确有实施困难的公司，按规定履行报备程序后可申请暂缓执行。\n\n## （二）行业实施概览\n\n从平台概览页面可以看到，2025年有36家公司实施了新保险合同会计准则。头部寿险公司共计9家，其中，平安人寿、太保寿险、新华人寿、太平人寿和阳光人寿于2023年正式实施；国寿于2024年正式实施；泰康人寿、人保寿险、友邦人寿于2025年正式实施。口径方面，人保寿险对2024年比较期使用了分类重叠法，对部分过渡期内终止确认的资产在对比期间按新的金融工具准则资产分类进行列报披露；泰康人寿、友邦人寿2024年对比期间资产端沿用旧金融工具准则口径，两年数据不可直接对比。\n\n银保系提前实施的公司共计9家。其中，中邮人寿、工银安盛、建信人寿、农银人寿、交银人寿于2024年同步实施两项新准则；中信保诚、招商信诺、中银三星、中荷人寿于2025年正式实施。仅中银三星对2024年比较期采用了分类重叠法重述资产端数据。中信保诚、招商信诺、中荷人寿2024年对比期间资产端沿用旧金融工具准则口径，两年数据不可直接对比。我司按照法定时间2026年实施，不纳入概览页面统计公司。\n\n外资公司共计7家提前实施新准则。除中意人寿于2024年实施外，中英人寿、同方全球、复星保德信、瑞泰人寿、陆家嘴国泰人寿和恒安标准人寿都于2025年正式实施。其中，中英人寿、同方全球和瑞泰人寿2024年对比期间资产端沿用旧金融工具准则口径，其余三家都采用了分类重叠法。\n\n养老险公司共计4家。其中，平安养老、太平养老于2023年跟随集团同步实施两项新准则；泰康养老和恒安标准养老于2025年完成两项准则实施，但恒安标准养老对2024年比较期采用了分类重叠法重述资产端数据，泰康养老比较期仍然为旧金融工具准则口径。\n\n健康险公司共计3家。其中，平安健康和太保健康于2023年跟随集团同步实施两项新准则；人保健康于2025年实施，且对2024年比较期采用了分类重叠法。\n\n4家中小公司提前实施了新准则，分别为国富人寿、东吴人寿、东方嘉富人寿和财信吉祥人寿。除国富人寿于2024年实施外，其余公司都在2025年实施且仅东方嘉富人寿采用了分类重叠法。\n\n## （三）头部寿险公司对标分析\n\n### 1.资本与资产负债结构分析\n\n从资产规模维度看，中国人寿、平安人寿、太保人寿构成行业传统老三家，泰康人寿、新华人寿、太平人寿紧随其后；人保寿险、阳光人寿资产规模相对偏小。友邦中国单体报表资产规模排名靠后。头部寿险公司整体总资产同比增长约14%。【图:关键经营指标→总资产@头部险企】\n\n净资产层面，全部头部险企均实现正向增长，增长主要来源于两方面：一是经营形成的综合收益带来净资产积累；二是通过股东增资、发行无固定期限资本债券等外源性资本补充手段增厚权益。其中平安人寿完成股东增资200亿元并发行130亿元永续债，一定程度对冲了高额股东分红带来的资本流出；泰康人寿、太平人寿、阳光人寿分别发行60亿元、90亿元、50亿元永续债，充实自身资本实力。【图:关键经营指标→净资产@头部险企】\n\n净资产反映的是保险公司已经形成的股东权益，属于历史已经实现的存量结果；而在保险负债当中，合同服务边际CSM代表股东可从存量保险业务中未来逐步释放、结转确认的剩余权益。从CSM余额来看，头部险企CSM整体规模与资产规模排序大体相近，但友邦人寿呈现明显分化特征：其单体资产规模在头部险企中处于靠后位置，CSM余额却表现亮眼。【图:关键经营指标→CSM 余额@头部险企】\n\n头部险企的CSM余额变动相对平稳，整体相较2024年增加2%。每年均有较大规模的合同服务边际随服务的提供逐步释放，若没有充足的新业务进行补充，存量释放会直接造成CSM余额消耗回落。因此头部险企需要持续拓展新业务，对冲存量释放带来的消耗，守住CSM规模。但头部险企2025年新业务CSM降低3%，尤其是太平人寿，经营层面存在维持CSM余额稳定的压力。该特点和中小险企形成明显区别，中小险企 CSM 存量基数较低，新业务产生的CSM增量贡献突出，CSM余额能够实现较为明显的增长。【图:关键经营指标→新业务 CSM@头部险企】\n\n按照新保险合同会计准则过渡期允许的方法对CSM进行拆分可见，多数公司采用修正追溯法与公允价值法相结合的方式完成准则切换开账；其中阳光人寿全部合同均采用修正追溯法，友邦人寿选择公允价值法进行开账的合同占比处于较高水平。【图:关键经营指标→按过渡期方法拆分CSM@头部险企】\n\n负债结构上，头部寿险保险合同负债占总资产比例高度趋同，均值水平约82%。\n\n为进一步观察负债内部结构，引入CSM占未来现金流量现值BEL的比例这一指标，用以衡量保险合同负债中，归属于股东的合同服务边际与归属于保单客户的保险负债之间的相对结构。从结果看，头部险企该指标平均水平约20%；其中友邦人寿大幅领先，占比接近50%。除友邦人寿外，泰康人寿该指标同样相对较高，大致处于20%附近；其余多数头部寿险企业该比例处于两位数区间，整体表现显著优于中小寿险公司。【图:关键监测指标→CSM/BEL占比@头部险企】\n\n### 2.利润分析\n\n在利润维度，我们对比了税前利润与净利润表现。2025年末财政部、税务总局出台保险合同准则转换的企业所得税处理公告，明确计税基础后续将切换为新保险合同会计准则下的会计利润。受该政策影响，各家险企两年间实际所得税税率出现较为明显的波动。其中太平人寿出现税后净利润高于税前利润的特殊现象，应该主要源于准则切换时点，一次性确认历史可抵扣亏损对应的递延所得税资产，带来的所得税费用抵减效应。该类情形在太平养老中也有出现。其他公司在准则切换后会计利润有所升高，更多确认为递延所得税负债；而太平人寿虽同样产生准则切换带来的递延所得税负债，但同时补确认了此前未入账的历史税务亏损，最终体现为当期所得税费用大幅下降。【图:利润分析→税前利润、税率及净利润@头部险企】\n\n在剔除税务因素对当期利润的扰动后，再观察税前利润，可拆分为保险业务业绩与投资业务业绩。按照新保险合同会计准则机制，采用浮动收费模型的分红险、万能险、专属积累期业务的利差变动优先被分红特储/万能特储/负债保障准备和CSM吸收。当利差恶化击穿特储和CSM余额之后，再确认LC亏损部分，计入保险服务费用。因此该类业务下利差是从保险服务业绩中体现出来。\n\n绝大多数头部寿险公司符合上述特征，保险服务业绩占比较高，投资服务业绩占比较低。但中国人寿、新华人寿属于特例，两家保险服务业绩和投资服务业绩占利润比重与其他家公司相反。根本原因为两家公司权益资产配置风格更为激进，股票等主动交易类权益占比较高，2025年权益市场行情上行直接推高投资收益。银保系、中小寿险公司普遍也呈现投资业绩占比更高的特征。总体而言，保险服务业绩代表承保主业收益，波动相对平稳；投资服务业绩直接受资本市场行情影响，波动幅度更大。【图:利润分析→保险服务业绩和投资服务业绩@头部险企】\n\n### 2.1保险服务业绩\n\n2025年头部险企保险服务收入整体小幅上行，同比增长2%，增长主要来源于CSM的摊销释放。平安人寿、泰康人寿CSM余额均出现小幅回落，但泰康人寿预计当期发生的赔款及其他相关费用等保险服务收入构成项目实现一定幅度增长弥补了CSM摊销的下降，平安人寿其他保险服务收入构成项目也有一定下降，因此最终仅平安人寿的保险服务收入出现小幅下降。【图:保险服务业绩→保险服务收入/费用/业绩@头部险企】\n\n进一步观察保险服务收入中PAA与非PAA的结构占比。对比两年数据可以看到，头部险企该收入结构整体保持稳定，收入绝大部分来源于非PAA业务。分公司来看，中国人寿短期险对应的PAA业务贡献相对更高；平安人寿因集团内有平安财险承接短期险业务，自身保险服务收入几乎全部来自长期险的非PAA业务。【图:保险服务业绩→收入构成 — PAA vs Non-PAA@头部险企】\n\n对长险保险服务收入做结构拆分，头部险企CSM释放平均占长险保险服务收入的40%。阳光人寿过渡期100%采用修正追溯开账，历史获取现金流量的摊销贡献占比较高；友邦人寿大量采用公允价值开账模式，获取现金流量的摊销占比偏低。【图:保险服务业绩→非PAA合同组的收入构成@头部险企】\n\n随着业务量的增长，各家的保险服务费用也小幅上升，但中国人寿除外。中国人寿的保险服务费用下降了18%，主要因为2024年利率下行，其高保证利率业务亏损加剧约300亿元，2025年市场利率环境改善，亏损加剧规模大幅回落。人保寿险呈现反向波动，2024年发生大额亏损转回，2025年转为亏损加剧。【图:保险服务业绩→保险服务收入/费用/业绩@头部险企】\n\n太保寿险、泰康人寿、人保寿险和阳光人寿四家机构分红险采用RW风险加权折现率，负债折现曲线走势平滑，和资产端市场利率变动不同步。2024年利率曲线下行，资产形成浮盈而负债折现率保持平稳，带来大额CSM有利调整或亏损转回；2025年利率曲线小幅上行，资产转为浮亏，形成CSM不利调整或亏损加剧。中国人寿、平安人寿、太平人寿选用即期折现率曲线，资产与负债计量同步联动，上述类型的报表波动更小。【图:保险服务业绩→非PAA合同组的费用构成@头部险企】\n\n大部分公司在附注中披露了实际发生的业务及管理费，并将其拆解为获取费用、维持费用与非履约费用分别列示。其中新华人寿该项费用水平偏高，原因是包含了手续费及佣金支出。头部险企非履约费用占比基本处于两位数区间，友邦人寿和阳光人寿占比相对较高，在20%以上。进一步观察获取费用与维持费用的结构占比，各家头部险企呈现较为明显的分化。泰康人寿成本向获取费用倾斜，获取费用占比接近七成；与之形成对比的是太保人寿，其成本大半归集至维持费用，体现出各家在获取、维持费用划分上的会计处理倾向。【图:保险服务业绩→费用分析@头部险企】\n\n综合来看，多数头部险企保险服务业绩实现提升，仅平安人寿因保险服务收入小幅回落、人保寿险受亏损部分加剧因素扰动，带来保险服务业绩下滑。\n\n进一步对非PAA业务保险服务业绩做拆解，若剔除亏损部分的确认及转回带来的影响，头部险企CSM摊销贡献占比处于较高水平，大概在80%左右。如果在亏损部分管控到位的前提下，未来保险服务业绩将主要依托CSM摊销释放；一旦亏损部分管控失当，保险服务业绩就会产生明显波动。亏损部分较高的公司，CSM贡献占比波动显著，保险服务业绩稳定性偏弱。造成亏损部分承压的核心驱动主要来自浮动收费模型下的利差管理，其余因素带来的影响相对有限。【图:保险服务业绩→非PAA合同组的收入构成@头部险企】\n\n### 2.2投资服务业绩\n\n新金融工具准则资产配置层面，头部寿险公司持续提升FVOCI权益工具配置比例，平安人寿该类资产占比已经超过10%。AC摊余成本类资产占比整体处于压降趋势，新华人寿AC资产占比仍维持约20%。【图:投资服务业绩→IFRS 9 金融资产分类@头部险企】\n\n转向投资回报维度分析。暂剔除口径不具备可比性的泰康人寿与友邦人寿，其余头部险企在资产配置结构大体稳定的背景下，投资收益实现抬升，应该主要受益于权益市场行情向好。2025年权益市场经历多轮上行行情，带动权益类投资收益增长。此前提到中国人寿、新华人寿偏向主动开展权益交易操作，从数据上也能够得到印证，两家公司投资收益涨幅表现尤为突出。【图:投资服务业绩→净投资回报@头部险企】\n\n在VFA模型下，利差变动由CSM吸收，承保财务损益镜像投资收益。将该部分镜像影响剔除之后，得到的投资服务业绩主要反映非VFA模型的传统保险业务的经营结果。理论上，若传统险业务不配置权益类资产、投资以FVOCI债权资产为主，投资服务业绩应当表现得十分平稳。但现实中各家传统险账户仍配置一定比例权益资产，因此传统险对应的投资服务业绩依旧会出现波动。2025年权益市场行情向好，行业整体投资端实现正向收益，但人保寿险和阳光人寿投资服务业绩小幅走弱。【图:投资服务业绩→承保财务净损益@头部险企】【图:投资服务业绩→投资服务业绩@头部险企】\n\n保险服务业绩与投资服务业绩同步抬升，推动多数头部险企净利润同比上行。【图:关键经营指标→净利润@头部险企】\n\n受负债 OCI 选择权的影响，评估保险企业经营不能仅聚焦净利润，还应关注其他综合收益，此处为资产、负债共同作用下的净影响。从结果来看，太保人寿、阳光人寿OCI大幅下降。和投资回报逻辑类似，VFA业务在其他综合收益层面同样存在镜像对冲效应，OCI变动主要反映传统险业务的资产负债匹配结果，差异根源来自各家传统险折现率选取方案不同。\n\n太保寿险、阳光人寿使用60天平均曲线，新华人寿采用20天平均，人保寿险采用30天平均，中国人寿、平安人寿、太平人寿使用评估日即期曲线。多日移动平均曲线可以使错配影响的时间递延，资产负债错配的风险本身没有消除。2024到2025年利率曲线方向发生反转，使用60天平均曲线的公司OCI变动方向与采用即期曲线的主体完全相反。\n\n综合来看大部分头部寿险公司综合收益提升，驱动因素来自净利润增长叠加OCI匹配缺口收窄。太保寿险、阳光人寿受60天平均曲线影响，OCI匹配缺口扩大，综合收益同比下行。【图:关键经营指标→其他综合收益(OCI)@头部险企】\n\n### 4.关键监测指标\n\n新业务CSM利润率是衡量盈利新单签发时点的首日利润率，大部分公司两年间波动不大，头部平均水平约11%。其中人保寿险近两年利润率表现突出，达到20%；友邦人寿利润率同样处于高位，与其产品定价水平较高直接相关。太平人寿下降幅度较大，与太平人寿进行分红险转型有关，其2025年年报显示，新业务当中90%以上来源于分红险。分红险存在客户利益分享机制，产品销售难度相对更高，直接造成新业务CSM规模有所回落，同时定价利率调整、费用端报行合一政策也带来一定扰动。【图:关键监测指标→新业务IFRS 利润率@头部险企】\n\n再看新业务LC亏损率，它是新业务LC除以新业务亏损合同未来现金流入现值，衡量亏损新单的亏损深度。友邦人寿该亏损率数值偏高。但将CSM与LC合并后再除以总新单保费现值，友邦综合利润率仍可达15%，可见 LC 带来的实际侵蚀程度十分有限。【图:关键监测指标→新业务亏损合同占比@头部险企】\n\n新业务CSM和LC合起来看新业务IFRS利润率，头部险企里泰康人寿新业务利润率为4.2%，推测主要受计算分母影响，其分母现金流入现值统计口径包含了保单贷款相关现金流。【图:关键监测指标→新业务IFRS 利润率@头部险企】\n\n新业务获取费用率反映新业务层面获取成本的投入强度，大部分公司两年间变化不大，受报行合一和降本增效的影响，总体呈下降趋势。头部平均水平约8%，平安人寿和友邦人寿相对较高。【图:关键监测指标→新业务获取费用率@头部险企】\n\n头部险企CSM摊销比率大致处于7%‑9%区间，CSM摊销比率衡量存量利润池的释放速度。CSM持续率以新业务CSM除以CSM摊销额衡量，可以形象理解为CSM蓄水池的进水口与出水口。健康状态下应当实现进水大于出水，即该指标大于100%。头部险企仅有少数公司CSM持续率超过100%，多数企业低于100%。究其原因，头部险企或是采用修正追溯法开账，或是历史业务积淀深厚，存量CSM基数庞大，每年摊销释放规模较高；当新业务CSM增量无法覆盖摊销流出时，就会对CSM余额造成压力。当前阳光人寿的CSM持续率表现最优，一方面公司整体体量偏小，摊销基数低，另一方面新业务CSM贡献较高。【图:关键监测指标→CSM 摊销比例@头部险企】【图:关键监测指标→CSM 持续率@头部险企】\n\n## （四）银行系寿险公司对标分析\n\n行业内共计10家银行系寿险公司，其中9家已完成新保险合同会计准则实施，仅光大永明人寿仍沿用旧准则。受我司股东属性影响，年报对标分析中将我司划入银行系公司组别。银行系保险公司业务以储蓄型保单为主，股东多为商业银行，具备突出的渠道资源优势，但保单整体保障属性相对偏弱。\n\n### 1、资本与资产负债结构分析\n\n银行系公司资产规模分化程度较高。中邮人寿总资产已近7,000亿级别，规模遥遥领先；工银安盛、建信人寿、中信保诚资产规模达到3,000亿档位；招商信诺、农银人寿为2,000亿级别；交银人寿、中银三星资产规模在千亿区间。【图:关键经营指标→总资产@银行系公司】\n\n净资产层面，大部分银行系机构净资产实现增长，由综合收益正向贡献叠加增资、资本债发行共同驱动。中邮人寿增资叠加发债合计规模约120亿元，工银安盛发行资本债70亿元。【图:关键经营指标→净资产@银行系公司】\n\n净资产底子薄弱的机构，保险合同负债占总资产比例会进一步抬升，银行系负债占比中枢大致在88%。中银三星和中荷人寿超过了90%，负债占比较高。\n\nCSM指标组内分化明显，和总资产规模趋势并不一致。部分具备外资背景的保险公司，经营表现相对更为优秀。招商信诺历史保障业务积淀较厚，CSM余额相对较高，CSM/BEL指标也接近头部寿险20%的水平；其余绝大多数银行系公司储蓄型业务占比较高，CSM/BEL集中在10%上下。【图:关键经营指标→CSM 余额@银行系公司】【图:关键监测指标→CSM/BEL占比@银行系公司】\n\n披露的公司中，中邮人寿和中银三星过渡期全部采用公允价值开账。【图:关键经营指标→按过渡期方法拆分CSM@银行系公司】\n\n### 2、利润分析\n\n银行系公司没有出现净利润比税前利润高的情况，但两年间税率波动较大。建信人寿税率显著偏高。【图:利润分析→税前利润、税率及净利润@银行系公司】\n\n银行系利润结构和头部寿险形成明显反差，大部分银行系公司投资服务业绩占比高于保险服务业绩。除中银三星和建信人寿保险业绩表现相对突出外，其余多数银行系公司2025年投资业绩表现亮眼，主要因为银行系2025年整体投资端经营向好。但与行业头部公司对比可得出相近结论：保险服务业绩整体保持相对稳定，业绩波动主要来源于投资服务业绩。不过银行系保险业务的稳定性弱于行业头部公司，主要源于其亏损部分的经营管理难度更高：银行系过往大量销售短期分红型产品，该类产品历史上亏损压力相对较大。【图:利润分析→保险服务业绩和投资服务业绩@银行系公司】\n\n### 2.1保险服务业绩\n\n受新业务贡献推动，CSM余额实现增长，持续释放合同服务边际，带动保险服务收入提升，其同比增幅显著高于头部寿险公司。中信保诚保险服务收入下降4%主要因为预计当期发生的赔款及其他相关费用的下降，可能是因为精算假设的调整带来的。【图:保险服务业绩→保险服务收入/费用/业绩@银行系公司】\n\n进一步观察保险服务收入中PAA与非PAA的结构占比。建信人寿PAA业务的保险服务收入贡献相对较高，主要因为其下设建信财产险子公司。其余银保系公司该部分贡献则普遍偏低。【图:保险服务业绩→收入构成 — PAA vs Non-PAA@银行系公司】\n\n从非PAA业务的收入结构贡献维度对比，头部寿险公司CSM摊销贡献占比相对集中，大致维持在40%上下；而银保系各公司之间分化明显。差异来源于多方面因素，既包括开账日会计处理方法不同带来的保险获取现金流量摊销贡献分化，也受各家业务结构中保障型、储蓄型保单占比差异影响。【图:保险服务业绩→非PAA合同组的收入构成@银行系公司】\n\n其中，中邮人寿、中银三星人寿采用完全公允价值开账模式，其余公司都是修正追溯法和公允价值法结合的方式。中邮、中银三星虽为公允价值开账，保险获取现金流量摊销占比并未处于极低水平，主要因为新业务拉动作用明显。反观部分同等采用公允价值开账的中小公司，保险获取现金流量摊销仅为个位数，新业务贡献较低。\n\n保险服务费用随业务规模扩张，多数银保系公司呈现增长态势，但个体分化显著。招商信诺和中信保诚保险服务费用降幅突出，主要源于上年亏损规模较高，本年度亏损有所收窄；中邮人寿保险服务费用大幅上行同样与亏损变动相关，上年为亏损转回，本年度为亏损确认。【图:保险服务业绩→保险服务收入/费用/业绩@银行系公司】\n\n该现象与各家分红险折现率方案直接相关，中邮人寿、交银人寿和招商信诺选用RW风险加权折现率，报表上出现“上年亏损转回或CSM有利调整、本年亏损确认或CSM不利调整”跨期反转现象，整体来看，银保系公司对应的亏损确认普遍大于头部寿险公司，进而造成保险服务费用和保险服务业绩波动更大。【图:关键监测指标→CSM 摊销比例@银行系公司】\n\n业管费用拆分结果显示，农银人寿、中银三星披露口径包含手续费佣金，获取费用占比处于高位。其余机构在获取费用、维持费用之间分配策略差异较大，分配选择会直接影响首日利得以及当期损益表现。【图:保险服务业绩→费用分析@银行系公司】\n\n对非PAA业务保险服务业绩做拆解，头部险企CSM摊销贡献占比比较稳定，大概在80%左右。但在银行系公司中分化就比较大，主要还是因为亏损确认的问题。但中荷人寿其亏损主要来源于初始亏损，该公司整体体量偏小，但初始亏损接近4亿；而其余银行系公司的亏损，大多来自存量保单利差变动影响。我司主要是因为可直接归属费用比例较低带来的费差损问题，这种现象在太平养老中也存在。【图:保险服务业绩→非PAA合同组的收入构成@银行系公司】\n\n### 2.2投资服务业绩\n\n新金融工具准则资产配置层面，因为中信保诚、招商信诺、中荷人寿三家公司比较期没有重述，统计口径存在差异。其他公司在持续提升FVOCI工具配置比例， AC摊余成本类资产占比整体处于压降趋势，中邮和招商信诺已经没有此类资产。我司交易性金融资产占比较高。【图:投资服务业绩→IFRS 9 金融资产分类@银行系公司】\n\n除了以上三家公司口径不可比外，其余公司投资回报基本都是增长态势。对于承保财务损益，受“镜像效应”影响，其变动幅度与投资回报基本保持一致；而投资服务业绩的结果，本质上反映的是传统险业务对应的损益表现。总体上投资业绩会比头部险企波动更大。【图:投资服务业绩→净投资回报@银行系公司】【图:投资服务业绩→承保财务净损益@银行系公司】【图:投资服务业绩→投资服务业绩@银行系公司】\n\n净利润维度，大部分银行系净利润同比提升；中邮人寿受亏损确认规模增加叠加投资业绩回落，净利润同比下滑；而中银三星主要受投资业绩下滑影响。【图:关键经营指标→净利润@银行系公司】\n\n除中信保诚外，其余公司的其他综合收益缺口均呈现收窄态势。大部分公司传统险折现率采用当天或20天平均，2025年两种曲线均为上行。据了解，中信保诚应该是下调了溢价相关假设，与同业形成差异。【图:关键经营指标→其他综合收益(OCI)@银行系公司】\n\n### 3、关键监测指标\n\n工银安盛、建信人寿和农银人寿没有披露新业务相关指标，其他披露公司来看，新业务CSM利润率均值和头部险企一样在11%左右，因为预定利率下降和报行合一影响，各家基本都微微上升，同时新业务LC亏损率有所下降。【图:关键监测指标→新业务IFRS 利润率@银行系公司】【图:关键监测指标→新业务亏损合同占比@银行系公司】【图:关键监测指标→新业务IFRS 利润率@银行系公司】\n\n虽然交银人寿的LC亏损率有所加剧，但将CSM与LC合并后再除以总新单保费现值看新业务利润率仍上升了两个百分点，可见 LC 带来的实际侵蚀程度十分有限。\n\n银行系公司新业务获取费用率较头部寿险平均水平低3个百分点，反映出银行系依托母行渠道资源，保单获取成本相对可控。该差异一方面来源于银保渠道天然的获客优势，无需承担代理人渠道较高的佣金及队伍运营成本；另一方面也受业务结构影响，银行系以储蓄型保单为主，而头部寿险保障型业务占比相对更高。但较低的获取费用率并不直接等同于新业务利润率表现优异。【图:关键监测指标→新业务获取费用率@银行系公司】\n\n银行系CSM摊销率处于5% -8%区间，整体低于头部寿险，和增额终身寿等超长期储蓄保单占比较高直接相关。我司主要是因为长期年金险业务，CSM摊销比例在6%左右。【图:关键监测指标→CSM 摊销比例@银行系公司】\n\n银行系多数公司CSM持续率大于100%，新业务CSM流入规模大于摊销流出，CSM余额保持持续扩张。受开业时间较短、处于新业务扩张阶段影响，我司CSM持续率维持在较高水平。【图:关键监测指标→CSM 持续率@银行系公司】\n";
+var REPORT_KB = [{"h": "引言与项目背景", "t": "新保险合同会计准则实施后，保险机构年报披露要求显著提升，尤其金额类信息披露维度进一步扩充，除财务主表外，大量关键指标需通过报表附注予以披露。受此影响，年报表格及披露字段数量大幅增加，且各市场主体披露口径、文档格式存在较大差异。若采用人工方式批量提取多家公司多期维度指标，不仅工作负担重，还易产生人工录入偏差。针对上述业务痛点，项目组搭建年报分析工作台，实现新准则下年报数据的自动化同业对标分析。"}, {"h": "引言与项目背景", "t": "本项目以公司AI创新大赛为契机，7月27日正式启动，整体建设周期约一个月。完整数据处理链路为原始年报下载、数据指标抽取与清洗、指标计算逻辑固化和前端可视化页面开发，全流程嵌入多轮校验，对各环节输出结果进行质量复核。平台通过标准化流程已完成2023-2025年寿险子公司层面新准则年报数据分析、2025半年度和2026半年度集团层面年报数据分析，支撑同业指标的批量对标查询。"}, {"h": "引言与项目背景", "t": "受当前技术环境与项目资源约束，平台现阶段仍存在一定客观局限性，后续将持续迭代优化与功能完善。"}, {"h": "引言与项目背景", "t": "新保险合同会计准则（以下简称IFRS17）从底层重构保险负债计量逻辑，引入合同服务边际CSM、亏损部分LC、保险服务收入、VFA浮动收费模型等核心概念。新金融工具准则（以下简称IFRS9）重构金融资产三分类规则与预期信用损失减值计量模型。根据财政部相关实施安排，保险公司执行新保险合同会计准则时，应当已同步执行新金融工具相关会计准则，避免出现资产、负债计量基础错配。"}, {"h": "引言与项目背景", "t": "行业实施新保险合同会计准则的时间节奏分为三档：在境内外同时上市以及在境外上市并采用国际财务报告准则编制财务报表的公司，自2023年1月1日起实施新准则；部分银保系公司、外资公司选择在2024‑2025年度分批提前实施；其余保险公司法定执行时点为2026年1月1日，确有实施困难的公司，按规定履行报备程序后可申请暂缓执行。"}, {"h": "引言与项目背景", "t": "从平台概览页面可以看到，2025年有36家公司实施了新保险合同会计准则。头部寿险公司共计9家，其中，平安人寿、太保寿险、新华人寿、太平人寿和阳光人寿于2023年正式实施；国寿于2024年正式实施；泰康人寿、人保寿险、友邦人寿于2025年正式实施。口径方面，人保寿险对2024年比较期使用了分类重叠法，对部分过渡期内终止确认的资产在对比期间按新的金融工具准则资产分类进行列报披露；泰康人寿、友邦人寿2024年对比期间资产端沿用旧金融工具准则口径，两年数据不可直接对比。"}, {"h": "引言与项目背景", "t": "银保系提前实施的公司共计9家。其中，中邮人寿、工银安盛、建信人寿、农银人寿、交银人寿于2024年同步实施两项新准则；中信保诚、招商信诺、中银三星、中荷人寿于2025年正式实施。仅中银三星对2024年比较期采用了分类重叠法重述资产端数据。中信保诚、招商信诺、中荷人寿2024年对比期间资产端沿用旧金融工具准则口径，两年数据不可直接对比。我司按照法定时间2026年实施，不纳入概览页面统计公司。"}, {"h": "引言与项目背景", "t": "外资公司共计7家提前实施新准则。除中意人寿于2024年实施外，中英人寿、同方全球、复星保德信、瑞泰人寿、陆家嘴国泰人寿和恒安标准人寿都于2025年正式实施。其中，中英人寿、同方全球和瑞泰人寿2024年对比期间资产端沿用旧金融工具准则口径，其余三家都采用了分类重叠法。"}, {"h": "引言与项目背景", "t": "养老险公司共计4家。其中，平安养老、太平养老于2023年跟随集团同步实施两项新准则；泰康养老和恒安标准养老于2025年完成两项准则实施，但恒安标准养老对2024年比较期采用了分类重叠法重述资产端数据，泰康养老比较期仍然为旧金融工具准则口径。"}, {"h": "引言与项目背景", "t": "健康险公司共计3家。其中，平安健康和太保健康于2023年跟随集团同步实施两项新准则；人保健康于2025年实施，且对2024年比较期采用了分类重叠法。"}, {"h": "引言与项目背景", "t": "4家中小公司提前实施了新准则，分别为国富人寿、东吴人寿、东方嘉富人寿和财信吉祥人寿。除国富人寿于2024年实施外，其余公司都在2025年实施且仅东方嘉富人寿采用了分类重叠法。"}, {"h": "引言与项目背景", "t": "从资产规模维度看，中国人寿、平安人寿、太保人寿构成行业传统老三家，泰康人寿、新华人寿、太平人寿紧随其后；人保寿险、阳光人寿资产规模相对偏小。友邦中国单体报表资产规模排名靠后。头部寿险公司整体总资产同比增长约14%。"}, {"h": "引言与项目背景", "t": "净资产层面，全部头部险企均实现正向增长，增长主要来源于两方面：一是经营形成的综合收益带来净资产积累；二是通过股东增资、发行无固定期限资本债券等外源性资本补充手段增厚权益。其中平安人寿完成股东增资200亿元并发行130亿元永续债，一定程度对冲了高额股东分红带来的资本流出；泰康人寿、太平人寿、阳光人寿分别发行60亿元、90亿元、50亿元永续债，充实自身资本实力。"}, {"h": "引言与项目背景", "t": "净资产反映的是保险公司已经形成的股东权益，属于历史已经实现的存量结果；而在保险负债当中，合同服务边际CSM代表股东可从存量保险业务中未来逐步释放、结转确认的剩余权益。从CSM余额来看，头部险企CSM整体规模与资产规模排序大体相近，但友邦人寿呈现明显分化特征：其单体资产规模在头部险企中处于靠后位置，CSM余额却表现亮眼。"}, {"h": "引言与项目背景", "t": "头部险企的CSM余额变动相对平稳，整体相较2024年增加2%。每年均有较大规模的合同服务边际随服务的提供逐步释放，若没有充足的新业务进行补充，存量释放会直接造成CSM余额消耗回落。因此头部险企需要持续拓展新业务，对冲存量释放带来的消耗，守住CSM规模。但头部险企2025年新业务CSM降低3%，尤其是太平人寿，经营层面存在维持CSM余额稳定的压力。该特点和中小险企形成明显区别，中小险企 CSM 存量基数较低，新业务产生的CSM增量贡献突出，CSM余额能够实现较为明显的增长。"}, {"h": "引言与项目背景", "t": "按照新保险合同会计准则过渡期允许的方法对CSM进行拆分可见，多数公司采用修正追溯法与公允价值法相结合的方式完成准则切换开账；其中阳光人寿全部合同均采用修正追溯法，友邦人寿选择公允价值法进行开账的合同占比处于较高水平。"}, {"h": "引言与项目背景", "t": "负债结构上，头部寿险保险合同负债占总资产比例高度趋同，均值水平约82%。"}, {"h": "引言与项目背景", "t": "为进一步观察负债内部结构，引入CSM占未来现金流量现值BEL的比例这一指标，用以衡量保险合同负债中，归属于股东的合同服务边际与归属于保单客户的保险负债之间的相对结构。从结果看，头部险企该指标平均水平约20%；其中友邦人寿大幅领先，占比接近50%。除友邦人寿外，泰康人寿该指标同样相对较高，大致处于20%附近；其余多数头部寿险企业该比例处于两位数区间，整体表现显著优于中小寿险公司。"}, {"h": "引言与项目背景", "t": "在利润维度，我们对比了税前利润与净利润表现。2025年末财政部、税务总局出台保险合同准则转换的企业所得税处理公告，明确计税基础后续将切换为新保险合同会计准则下的会计利润。受该政策影响，各家险企两年间实际所得税税率出现较为明显的波动。其中太平人寿出现税后净利润高于税前利润的特殊现象，应该主要源于准则切换时点，一次性确认历史可抵扣亏损对应的递延所得税资产，带来的所得税费用抵减效应。该类情形在太平养老中也有出现。其他公司在准则切换后会计利润有所升高，更多确认为递延所得税负债；而太平人寿虽同样产生准则切换带来的递延所得税负债，但同时补确认了此前未入账的历史税务亏损，最终体现为当期所得税费用大幅下降。"}, {"h": "引言与项目背景", "t": "在剔除税务因素对当期利润的扰动后，再观察税前利润，可拆分为保险业务业绩与投资业务业绩。按照新保险合同会计准则机制，采用浮动收费模型的分红险、万能险、专属积累期业务的利差变动优先被分红特储/万能特储/负债保障准备和CSM吸收。当利差恶化击穿特储和CSM余额之后，再确认LC亏损部分，计入保险服务费用。因此该类业务下利差是从保险服务业绩中体现出来。"}, {"h": "引言与项目背景", "t": "绝大多数头部寿险公司符合上述特征，保险服务业绩占比较高，投资服务业绩占比较低。但中国人寿、新华人寿属于特例，两家保险服务业绩和投资服务业绩占利润比重与其他家公司相反。根本原因为两家公司权益资产配置风格更为激进，股票等主动交易类权益占比较高，2025年权益市场行情上行直接推高投资收益。银保系、中小寿险公司普遍也呈现投资业绩占比更高的特征。总体而言，保险服务业绩代表承保主业收益，波动相对平稳；投资服务业绩直接受资本市场行情影响，波动幅度更大。"}, {"h": "引言与项目背景", "t": "进一步观察保险服务收入中PAA与非PAA的结构占比。对比两年数据可以看到，头部险企该收入结构整体保持稳定，收入绝大部分来源于非PAA业务。分公司来看，中国人寿短期险对应的PAA业务贡献相对更高；平安人寿因集团内有平安财险承接短期险业务，自身保险服务收入几乎全部来自长期险的非PAA业务。"}, {"h": "引言与项目背景", "t": "对长险保险服务收入做结构拆分，头部险企CSM释放平均占长险保险服务收入的40%。阳光人寿过渡期100%采用修正追溯开账，历史获取现金流量的摊销贡献占比较高；友邦人寿大量采用公允价值开账模式，获取现金流量的摊销占比偏低。"}, {"h": "引言与项目背景", "t": "随着业务量的增长，各家的保险服务费用也小幅上升，但中国人寿除外。中国人寿的保险服务费用下降了18%，主要因为2024年利率下行，其高保证利率业务亏损加剧约300亿元，2025年市场利率环境改善，亏损加剧规模大幅回落。人保寿险呈现反向波动，2024年发生大额亏损转回，2025年转为亏损加剧。"}, {"h": "引言与项目背景", "t": "太保寿险、泰康人寿、人保寿险和阳光人寿四家机构分红险采用RW风险加权折现率，负债折现曲线走势平滑，和资产端市场利率变动不同步。2024年利率曲线下行，资产形成浮盈而负债折现率保持平稳，带来大额CSM有利调整或亏损转回；2025年利率曲线小幅上行，资产转为浮亏，形成CSM不利调整或亏损加剧。中国人寿、平安人寿、太平人寿选用即期折现率曲线，资产与负债计量同步联动，上述类型的报表波动更小。"}, {"h": "引言与项目背景", "t": "大部分公司在附注中披露了实际发生的业务及管理费，并将其拆解为获取费用、维持费用与非履约费用分别列示。其中新华人寿该项费用水平偏高，原因是包含了手续费及佣金支出。头部险企非履约费用占比基本处于两位数区间，友邦人寿和阳光人寿占比相对较高，在20%以上。进一步观察获取费用与维持费用的结构占比，各家头部险企呈现较为明显的分化。泰康人寿成本向获取费用倾斜，获取费用占比接近七成；与之形成对比的是太保人寿，其成本大半归集至维持费用，体现出各家在获取、维持费用划分上的会计处理倾向。"}, {"h": "引言与项目背景", "t": "综合来看，多数头部险企保险服务业绩实现提升，仅平安人寿因保险服务收入小幅回落、人保寿险受亏损部分加剧因素扰动，带来保险服务业绩下滑。"}, {"h": "引言与项目背景", "t": "进一步对非PAA业务保险服务业绩做拆解，若剔除亏损部分的确认及转回带来的影响，头部险企CSM摊销贡献占比处于较高水平，大概在80%左右。如果在亏损部分管控到位的前提下，未来保险服务业绩将主要依托CSM摊销释放；一旦亏损部分管控失当，保险服务业绩就会产生明显波动。亏损部分较高的公司，CSM贡献占比波动显著，保险服务业绩稳定性偏弱。造成亏损部分承压的核心驱动主要来自浮动收费模型下的利差管理，其余因素带来的影响相对有限。"}, {"h": "引言与项目背景", "t": "新金融工具准则资产配置层面，头部寿险公司持续提升FVOCI权益工具配置比例，平安人寿该类资产占比已经超过10%。AC摊余成本类资产占比整体处于压降趋势，新华人寿AC资产占比仍维持约20%。"}, {"h": "引言与项目背景", "t": "转向投资回报维度分析。暂剔除口径不具备可比性的泰康人寿与友邦人寿，其余头部险企在资产配置结构大体稳定的背景下，投资收益实现抬升，应该主要受益于权益市场行情向好。2025年权益市场经历多轮上行行情，带动权益类投资收益增长。此前提到中国人寿、新华人寿偏向主动开展权益交易操作，从数据上也能够得到印证，两家公司投资收益涨幅表现尤为突出。"}, {"h": "引言与项目背景", "t": "在VFA模型下，利差变动由CSM吸收，承保财务损益镜像投资收益。将该部分镜像影响剔除之后，得到的投资服务业绩主要反映非VFA模型的传统保险业务的经营结果。理论上，若传统险业务不配置权益类资产、投资以FVOCI债权资产为主，投资服务业绩应当表现得十分平稳。但现实中各家传统险账户仍配置一定比例权益资产，因此传统险对应的投资服务业绩依旧会出现波动。2025年权益市场行情向好，行业整体投资端实现正向收益，但人保寿险和阳光人寿投资服务业绩小幅走弱。"}, {"h": "引言与项目背景", "t": "保险服务业绩与投资服务业绩同步抬升，推动多数头部险企净利润同比上行。"}, {"h": "引言与项目背景", "t": "受负债 OCI 选择权的影响，评估保险企业经营不能仅聚焦净利润，还应关注其他综合收益，此处为资产、负债共同作用下的净影响。从结果来看，太保人寿、阳光人寿OCI大幅下降。和投资回报逻辑类似，VFA业务在其他综合收益层面同样存在镜像对冲效应，OCI变动主要反映传统险业务的资产负债匹配结果，差异根源来自各家传统险折现率选取方案不同。"}, {"h": "引言与项目背景", "t": "太保寿险、阳光人寿使用60天平均曲线，新华人寿采用20天平均，人保寿险采用30天平均，中国人寿、平安人寿、太平人寿使用评估日即期曲线。多日移动平均曲线可以使错配影响的时间递延，资产负债错配的风险本身没有消除。2024到2025年利率曲线方向发生反转，使用60天平均曲线的公司OCI变动方向与采用即期曲线的主体完全相反。"}, {"h": "引言与项目背景", "t": "综合来看大部分头部寿险公司综合收益提升，驱动因素来自净利润增长叠加OCI匹配缺口收窄。太保寿险、阳光人寿受60天平均曲线影响，OCI匹配缺口扩大，综合收益同比下行。）"}, {"h": "引言与项目背景", "t": "新业务CSM利润率是衡量盈利新单签发时点的首日利润率，大部分公司两年间波动不大，头部平均水平约11%。其中人保寿险近两年利润率表现突出，达到20%；友邦人寿利润率同样处于高位，与其产品定价水平较高直接相关。太平人寿下降幅度较大，与太平人寿进行分红险转型有关，其2025年年报显示，新业务当中90%以上来源于分红险。分红险存在客户利益分享机制，产品销售难度相对更高，直接造成新业务CSM规模有所回落，同时定价利率调整、费用端报行合一政策也带来一定扰动。"}, {"h": "引言与项目背景", "t": "再看新业务LC亏损率，它是新业务LC除以新业务亏损合同未来现金流入现值，衡量亏损新单的亏损深度。友邦人寿该亏损率数值偏高。但将CSM与LC合并后再除以总新单保费现值，友邦综合利润率仍可达15%，可见 LC 带来的实际侵蚀程度十分有限。"}, {"h": "引言与项目背景", "t": "新业务CSM和LC合起来看新业务IFRS利润率，头部险企里泰康人寿新业务利润率为4.2%，推测主要受计算分母影响，其分母现金流入现值统计口径包含了保单贷款相关现金流。"}, {"h": "引言与项目背景", "t": "新业务获取费用率反映新业务层面获取成本的投入强度，大部分公司两年间变化不大，受报行合一和降本增效的影响，总体呈下降趋势。头部平均水平约8%，平安人寿和友邦人寿相对较高。"}, {"h": "引言与项目背景", "t": "头部险企CSM摊销比率大致处于7%‑9%区间，CSM摊销比率衡量存量利润池的释放速度。CSM持续率以新业务CSM除以CSM摊销额衡量，可以形象理解为CSM蓄水池的进水口与出水口。健康状态下应当实现进水大于出水，即该指标大于100%。头部险企仅有少数公司CSM持续率超过100%，多数企业低于100%。究其原因，头部险企或是采用修正追溯法开账，或是历史业务积淀深厚，存量CSM基数庞大，每年摊销释放规模较高；当新业务CSM增量无法覆盖摊销流出时，就会对CSM余额造成压力。当前阳光人寿的CSM持续率表现最优，一方面公司整体体量偏小，摊销基数低，另一方面新业务CSM贡献较高。"}];
+
+/* ===== 问问 Agent：报告知识检索（年度报告页注入；数据问答未覆盖时按知识库回答） ===== */
+window.askReportKB = function (q) {
+  if (!window.REPORT_KB || !q) return null;
+  var qs = String(q);
+  /* 数据问答意图（含公司+指标 / 排名 / 对比）交给数值问答，不抢答 */
+  var dataIntent = false;
+  try {
+    var hasComp = COMPANIES.filter(function (c) { return c.has_data; }).some(function (c) { return qs.indexOf(c.short_name) >= 0; });
+    var indWords = Object.keys(ASK_ALIAS);
+    var hasInd = indWords.some(function (w) { return qs.indexOf(w) >= 0; });
+    dataIntent = hasInd && (hasComp || /排名|前\s*\d|top\s*\d|和|与|vs|对比/.test(qs));
+  } catch (e) {}
+  if (dataIntent) return null;
+  var strongKws = ['背景', '概览', '实施', '准则', '口径', '政策', '监管', '对标', '同业', '税务', '税率', '分类重叠',
+    '递延', '创新大赛', '工作台', '项目', '2026年1月1日', '2023年1月1日', '暂缓', '法定执行'];
+  var hits = [];
+  for (var i = 0; i < window.REPORT_KB.length; i++) {
+    var k = window.REPORT_KB[i], score = 0;
+    var t = k.h + ' ' + k.t;
+    if (t.indexOf(qs) >= 0) score += 40;
+    if (k.t && k.t.length >= 10 && t.indexOf(qs.slice(0, Math.min(qs.length, 12))) >= 0) score += 12;
+    strongKws.forEach(function (w) { if (qs.indexOf(w) >= 0 && t.indexOf(w) >= 0) score += 4; });
+    if (score >= 12) hits.push({ k: k, s: score });
+  }
+  hits.sort(function (a, b) { return b.s - a.s; });
+  if (!hits.length) return null;
+  var take = hits.slice(0, 3);
+  function escKB(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  var out = '<div style="line-height:1.75"><div style="font-weight:700;color:var(--c-navy);margin-bottom:4px">报告知识</div>';
+  take.forEach(function (hx) {
+    out += '<div style="margin-bottom:6px"><span style="color:var(--c-navy);font-weight:600">『' + escKB(hx.k.h) + '』</span>'
+      + escKB(hx.k.t.length > 260 ? hx.k.t.slice(0, 260) + '…' : hx.k.t) + '</div>';
+  });
+  out += '<div style="color:var(--c-text-muted);font-size:12px">—— 全文见「年度报告」页（写作台左侧已预置，可编辑后配图导出）</div></div>';
+  return out;
+};
+
+/* ========== 年度报告 RN2 图文写作台（移植自 liutiaoren.html，适配本项目 40 图配置） ========== */
+(function () {
+  if (window.RN2) return;
+
+  /* ---- 工具 ---- */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  function $(id) { return document.getElementById(id); }
+  function subPageName(key) {
+    for (let i = 0; i < SUB_PAGES.length; i++) if (SUB_PAGES[i].key === key) return SUB_PAGES[i].name;
+    return key;
+  }
+  const PAGE_NAME_OF = {};
+  CHART_CONFIGS.forEach(c => { PAGE_NAME_OF[c.id] = subPageName(c.subPage); });
+
+  /* ---- 图表清单（按子页分组） ---- */
+  const CHARTLIST = [];
+  CHART_CONFIGS.forEach(function (c) {
+    if (c && c.title) CHARTLIST.push({ page: subPageName(c.subPage), cfg: c });
+  });
+  function findC(pg, ti) {
+    const list = CHARTLIST.filter(x => x.cfg.title === ti && (!pg || x.page === pg));
+    return list.length ? list[0].cfg : null;
+  }
+  function cfgHint(cfg) { return (PAGE_NAME_OF[cfg.id] || '') + '→' + cfg.title; }
+
+  /* ---- 公司组别 / 报告期 ---- */
+  const TYPES = (window.COMPANIES_DATA && COMPANIES_DATA.types) ? COMPANIES_DATA.types.slice() : [];
+  function grpComps(grp) {
+    let cs = COMPANIES.filter(c => grp === '全部' || (c.types || []).indexOf(grp) >= 0);
+    if (grp === '全部') cs = cs.filter(c => c.has_data);
+    return cs.map(c => c.short_name);
+  }
+  function sortedReps() {
+    let rs = (window.REPORT_PERIODS && REPORT_PERIODS.length) ? REPORT_PERIODS.slice() : ['2025年度'];
+    rs = rs.filter(v => /\d{4}/.test(v));
+    rs.sort((a, b) => parseInt(b.match(/\d{4}/)[0]) - parseInt(a.match(/\d{4}/)[0]) ||
+      (a < b ? 1 : a > b ? -1 : 0));
+    return rs.length ? rs : ['2025年度'];
+  }
+  const REPS = sortedReps();
+  function defaultRep() { return REPS.indexOf('2025年度') >= 0 ? '2025年度' : REPS[0]; }
+
+  /* ---- 智能配图规则（关键词 → 我方图表标题，已按本项目 40 图校准） ---- */
+  const RULES = [
+    { kw: ['税前利润', '所得税', '递延所得税', '税率', '税后净利润', '实际税'], page: '利润分析', title: '税前利润、税率及净利润' },
+    { kw: ['净利润', '利润总额'], page: '利润分析', title: '税前利润、税率及净利润' },
+    { kw: ['保险服务业绩', '保险业务业绩', '承保经营'], page: '利润分析', title: '保险服务业绩和投资服务业绩' },
+    { kw: ['投资服务业绩', '投资业务业绩', '投资业绩', '利差'], page: '利润分析', title: '保险服务业绩和投资服务业绩' },
+    { kw: ['总资产'], page: '关键经营指标', title: '总资产' },
+    { kw: ['净资产'], page: '关键经营指标', title: '净资产' },
+    { kw: ['CSM 余额', 'CSM余额', '合同服务边际余额'], page: '关键经营指标', title: 'CSM 余额' },
+    { kw: ['新业务 CSM', '新单CSM', '新单 CSM', '新业务CSM'], page: '关键经营指标', title: '新业务 CSM' },
+    { kw: ['新业务 LC', '新单 LC', '亏损合同'], page: '关键经营指标', title: '新业务 LC' },
+    { kw: ['其他综合收益', 'OCI'], page: '关键经营指标', title: '其他综合收益(OCI)' },
+    { kw: ['保险服务收入', '保险服务费用'], page: '保险服务业绩', title: '保险服务收入/费用/业绩' },
+    { kw: ['业务及管理费', '获取费用', '维持费用', '履约费用', '费用分析'], page: '保险服务业绩', title: '费用分析' },
+    { kw: ['Non-PAA', '非 PAA', '非PAA', '收入构成', '费用构成'], page: '保险服务业绩', title: '非PAA合同组的收入构成' },
+    { kw: ['净投资回报', '投资回报率'], page: '投资服务业绩', title: '净投资回报' },
+    { kw: ['承保财务'], page: '投资服务业绩', title: '承保财务净损益' },
+    { kw: ['IFRS 9', 'IFRS9', '金融资产', '债权投资', '交易性金融资产'], page: '投资服务业绩', title: 'IFRS 9 金融资产分类' },
+    { kw: ['CSM 摊销比例', '摊销比例', '摊销前CSM'], page: '关键监测指标', title: 'CSM 摊销比例' },
+    { kw: ['持续率'], page: '关键监测指标', title: 'CSM 持续率' },
+    { kw: ['新业务IFRS 利润率', 'IFRS 利润率', '新业务CSM 利润率', '新业务 CSM 利润率'], page: '关键监测指标', title: '新业务IFRS 利润率' },
+    { kw: ['亏损率', '亏损占比', '新业务亏损'], page: '关键监测指标', title: '新业务亏损合同占比' },
+    { kw: ['保险合同负债'], page: '关键监测指标', title: 'CSM余额占保险合同负债比例' },
+    { kw: ['折现率'], page: '其他披露信息', title: '折现率' },
+    { kw: ['非金融风险调整', '置信水平'], page: '其他披露信息', title: '非金融风险调整置信水平' },
+    { kw: ['CSM 变动', 'CSM变动', 'CSM 变动分析'], page: '关键监测指标', title: 'CSM 变动分析' },
+    { kw: ['LC 变动', 'LC变动', 'LC 变动分析'], page: '关键监测指标', title: 'LC 变动分析' }
+  ];
+  function kwMax(s, rule) {
+    let best = 0;
+    rule.kw.forEach(function (k) { if (s.indexOf(k) >= 0 && k.length > best) best = k.length; });
+    return best;
+  }
+  function tok(pg, ti, grp) { return '【图:' + pg + '→' + ti + (grp && grp !== '全部' ? '@' + grp : '') + '】'; }
+  function ruleTargetOk(ru) { return !!findC(ru.page, ru.title); }
+
+  /* ---- 元素 ---- */
+  const el = {};
+  const rn2Snaps = [];
+  function rn2Push() { if (el.ta) rn2Snaps.push(el.ta.value); if (rn2Snaps.length > 60) rn2Snaps.shift(); }
+
+  function initUI() {
+    if (el.ok) return;
+    el.ok = true;
+    el.type = $('rn2Type'); el.rep = $('rn2Rep'); el.chart = $('rn2Chart');
+    el.ta = $('rn2Ta'); el.paper = $('rn2Paper');
+    if (!el.type || !el.ta) return;
+    let t = '<option value="全部">全部（有数据）</option>';
+    TYPES.forEach(function (x) { t += '<option value="' + esc(x) + '">' + esc(x) + '</option>'; });
+    el.type.innerHTML = t;
+    const headIdx = Math.max(0, TYPES.indexOf('头部险企'));
+    el.type.selectedIndex = headIdx + 1; // +1 跳过「全部」
+    let r = '';
+    REPS.forEach(function (x) { r += '<option value="' + esc(x) + '">' + esc(x) + '</option>'; });
+    el.rep.innerHTML = r;
+    el.rep.value = defaultRep();
+    let cs = '';
+    SUB_PAGES.forEach(function (p) {
+      const items = CHART_CONFIGS.filter(c => c.subPage === p.key && c.title);
+      if (!items.length) return;
+      cs += '<optgroup label="' + esc(p.name) + '">';
+      items.forEach(function (c) { cs += '<option value="' + esc(p.name + '→' + c.title) + '">' + esc(c.title) + '</option>'; });
+      cs += '</optgroup>';
+    });
+    el.chart.innerHTML = cs;
+
+    $('rn2Auto').onclick = function () {
+      rn2Push();
+      el.ta.value = autoInsert(el.ta.value);
+      refresh();
+      toastTip('已按关键词自动插入图表标记，可继续手动微调');
+    };
+    $('rn2Ins').onclick = function () {
+      const v = el.chart.value; if (!v) return;
+      const sp = v.indexOf('→'); if (sp < 0) return;
+      const pg = v.slice(0, sp), ti = v.slice(sp + 1);
+      const s = el.ta.value, pos = el.ta.selectionStart || s.length, end = el.ta.selectionEnd || pos;
+      rn2Push();
+      el.ta.value = s.slice(0, pos) + tok(pg, ti, el.type.value) + s.slice(end);
+      el.ta.focus();
+      refresh();
+    };
+    $('rn2Go').onclick = refresh;
+    $('rn2ExH').onclick = function () {
+      rn2Push();
+      el.ta.value = autoInsert(EX_HEAD);
+      refresh();
+      toastTip('已载入「示例·头部」，并自动完成智能配图');
+    };
+    $('rn2ExY').onclick = function () {
+      rn2Push();
+      el.ta.value = autoInsert(EX_BANK);
+      refresh();
+      toastTip('已载入「示例·银保系」，并自动完成智能配图');
+    };
+    $('rn2Copy').onclick = copyHtml;
+    $('rn2Dl').onclick = downloadHtml;
+    $('rn2Clear').onclick = function () { rn2Push(); el.ta.value = ''; el.paper.innerHTML = ''; };
+    $('rn2Reset').onclick = function () {
+      rn2Push();
+      el.ta.value = window.REPORT_DEFAULT || '';
+      try { localStorage.removeItem('rn2draft'); } catch (e) {}
+      refresh();
+      toastTip('已恢复默认报告模板');
+    };
+    $('rn2Undo').onclick = function () {
+      if (!rn2Snaps.length) { toastTip('没有可撤回的操作（打字误删请用 Ctrl+Z）'); return; }
+      el.ta.value = rn2Snaps.pop();
+      el.ta.focus();
+      refresh();
+    };
+    el.type.onchange = refresh;
+    el.rep.onchange = refresh;
+    el.ta.addEventListener('input', function () {
+      try { localStorage.setItem('rn2draft', el.ta.value); } catch (e) {}
+    });
+    el.ta.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); refresh(); }
+    });
+  }
+  function toastTip(msg) { try { if (window.showToast) showToast(msg); } catch (e) {} }
+
+  /* ---- 智能配图 ---- */
+  function autoInsert(text) {
+    const blocks = text.split(/\n{2,}/), out = [], used = {};
+    for (let b = 0; b < blocks.length; b++) {
+      const block = blocks[b].trim();
+      if (!block) continue;
+      const sents = block.split(/(?=[。；!？])/), rebuilt = [];
+      for (let i = 0; i < sents.length; i++) {
+        const s = sents[i];
+        if (!s.trim()) continue;
+        const cands = [];
+        for (let r2 = 0; r2 < RULES.length; r2++) {
+          const ru = RULES[r2], key = ru.page + '→' + ru.title;
+          if (used[key] || !ruleTargetOk(ru)) continue;
+          const w = kwMax(s, ru);
+          if (w > 0) cands.push({ ru: ru, w: w });
+        }
+        cands.sort(function (a, bb) { return bb.w - a.w; });
+        if (cands.length) {
+          used[cands[0].ru.page + '→' + cands[0].ru.title] = 1;
+          rebuilt.push(s.trim() + tok(cands[0].ru.page, cands[0].ru.title, el.type.value));
+        } else rebuilt.push(s.trim());
+      }
+      out.push(rebuilt.join(''));
+    }
+    return out.join('\n\n');
+  }
+
+  /* ---- 预览渲染 ---- */
+  function refresh() {
+    if (!el.ok || !el.paper) return;
+    el.paper.innerHTML = '';
+    const box = document.createElement('div');
+    el.paper.appendChild(box);
+    const t = el.ta.value;
+    if (!t.trim()) {
+      box.innerHTML = '<div class="rn2-empty">等待输入…<br>粘贴段落文字后点「智能配图」，或点上方「示例·头部 / 示例·银保系」体验图文联动；也可点「恢复默认报告」查看整篇示例。</div>';
+      return;
+    }
+    const lines = t.split('\n');
+    const buf = [];
+    function flushP() {
+      if (buf.length) {
+        const pp = document.createElement('p');
+        pp.className = 'rn2-p';
+        pp.textContent = buf.join('').replace(/\s+/g, ' ').trim();
+        if (pp.textContent) box.appendChild(pp);
+        buf.length = 0;
+      }
+    }
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
+      const hm = /^(#{1,4})\s*(.*)$/.exec(line);
+      if (hm) {
+        flushP();
+        const hh = document.createElement('h' + hm[1].length);
+        hh.className = 'rn2-h';
+        hh.textContent = hm[2];
+        box.appendChild(hh);
+        continue;
+      }
+      if (!line.trim()) { flushP(); continue; }
+      const pieces = line.split(/(【图[：:][^】]*】)/g);
+      for (let pi = 0; pi < pieces.length; pi++) {
+        const part = pieces[pi];
+        const tm = /^【图[：:]([^@】]+?)(?:@([^】]*))?】$/.exec(part);
+        if (tm) {
+          flushP();
+          let pg = '', ti = tm[1], sp2 = tm[1].indexOf('→'), sep2 = 1;
+          if (sp2 < 0) { sp2 = tm[1].indexOf('->'); sep2 = 2; }
+          if (sp2 > 0) { pg = tm[1].slice(0, sp2).trim(); ti = tm[1].slice(sp2 + sep2).trim(); }
+          box.appendChild(figEl(pg, ti, tm[2] ? tm[2].trim() : (el.type.value || '')));
+        } else if (part && part.trim()) buf.push(part.trim());
+      }
+    }
+    flushP();
+    window.requestAnimationFrame(function () {
+      box.querySelectorAll('.rn2-figbox').forEach(function (d) {
+        const inst = (typeof echarts !== 'undefined') ? echarts.getInstanceByDom(d) : null;
+        if (inst) inst.resize();
+      });
+    });
+  }
+  function figEl(pg, ti, grp) {
+    const w = document.createElement('div');
+    w.className = 'rn2-fig';
+    const cap = document.createElement('span');
+    cap.className = 'rn2-figcap';
+    cap.textContent = (pg ? pg + ' · ' : '') + ti + (grp && grp !== '全部' ? '（' + grp + '）' : '');
+    w.appendChild(cap);
+    const body = document.createElement('div');
+    body.className = 'rn2-figbox';
+    w.appendChild(body);
+    const cfg = findC(pg, ti);
+    if (!cfg) {
+      body.innerHTML = '<div class="rn2-empty">未找到图表：' + esc((pg ? pg + '→' : '') + ti) + '<br>可用标题请在右上「手动选图」下拉中查看（格式：子页→图表标题）</div>';
+      return w;
+    }
+    if (cfg.chartType === 'table') body.classList.add('table');
+    if (cfg.chartType === 'waterfall') body.classList.add('wf');
+    const rep = el.rep ? el.rep.value : defaultRep();
+    const comps = grpComps(grp);
+    const renderFn = function () {
+      try {
+        renderChart(cfg, { el: body, companies: comps, periods: [rep] });
+      } catch (e) {
+        body.innerHTML = '<div class="rn2-empty">渲染失败：' + esc(String((e && e.message) || e)) + '</div>';
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(renderFn);
+    else setTimeout(renderFn, 0);
+    return w;
+  }
+
+  /* ---- 快照 / 复制 / 下载（按文档顺序，含标题/段落/图） ---- */
+  function snap() {
+    let html = '', plain = '';
+    const walk = el.paper.querySelector('.rn2-paper > div');
+    if (!walk) return { html: html, plain: plain };
+    Array.prototype.forEach.call(walk.childNodes, function (node) {
+      if (node.nodeType !== 1) return;
+      if (node.classList && node.classList.contains('rn2-fig')) {
+        const cap = node.querySelector('.rn2-figcap');
+        const capText = cap ? cap.textContent : '';
+        html += '<p style="text-align:center;font-size:12px;color:#1f3b63;margin:16px 0 2px">' + esc(capText) + '</p>';
+        plain += capText + '\n';
+        const box = node.querySelector('.rn2-figbox');
+        if (box) {
+          const inst = (typeof echarts !== 'undefined') ? echarts.getInstanceByDom(box) : null;
+          if (inst && typeof inst.getDataURL === 'function') {
+            html += '<img src="' + inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' }) + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px">';
+            plain += '[图]\n';
+          } else {
+            const tbl = box.querySelector('table');
+            if (tbl) { html += tbl.outerHTML; plain += '[表格]\n'; }
+            else { html += '<div class="rn2-empty">[图渲染未就绪，请先刷新预览]</div>'; plain += '[图未就绪]\n'; }
+          }
+        }
+      } else if (node.classList && node.classList.contains('rn2-p')) {
+        html += '<p style="font-size:14px;line-height:2.05;text-align:justify;margin:10px 0">' + esc(node.textContent) + '</p>';
+        plain += node.textContent + '\n';
+      } else if (node.tagName && /^H[1-4]$/.test(node.tagName)) {
+        const lv = parseInt(node.tagName.charAt(1));
+        html += '<h' + lv + ' style="color:#1f3b63;margin:18px 0 8px">' + esc(node.textContent) + '</h' + lv + '>';
+        plain += node.textContent + '\n';
+      }
+    });
+    return { html: html, plain: plain };
+  }
+  function copyHtml() {
+    const s = snap();
+    if (!s.html) { toastTip('正文为空，无可复制内容'); return; }
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:-9999px;top:0';
+    holder.innerHTML = s.html;
+    document.body.appendChild(holder);
+    try {
+      const sel = window.getSelection(), rng = document.createRange();
+      rng.selectNodeContents(holder);
+      sel.removeAllRanges(); sel.addRange(rng);
+      const ok = document.execCommand('copy');
+      sel.removeAllRanges();
+      const imgN = holder.querySelectorAll('img').length;
+      toastTip(ok ? ('已复制 ' + imgN + ' 张图与正文，可直接粘贴到 Word/文档') : '复制失败，请用「下载 HTML」');
+    } catch (e) {
+      toastTip('复制失败：' + e.message);
+    }
+    document.body.removeChild(holder);
+  }
+  function downloadHtml() {
+    const s = snap();
+    if (!s.html) { toastTip('正文为空，无可下载内容'); return; }
+    const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>年度报告片段</title>' +
+      '<style>body{font-family:"Microsoft YaHei","SimHei",sans-serif;max-width:900px;margin:0 auto;padding:36px 20px;color:#2b2b28;line-height:2.05;text-align:justify}table{border-collapse:collapse}td,th{border:1px solid #dde3ea;padding:4px 8px;font-size:12px}th{background:#eef3f9}</style></head><body>' +
+      s.html + '</body></html>';
+    const a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(doc);
+    a.download = '年度报告片段_图文.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  /* ---- 示例短文（演示智能配图） ---- */
+  const EX_HEAD = [
+    '在利润维度，我们对比了税前利润与净利润表现。2025年末财政部、税务总局出台保险合同准则转换的企业所得税处理公告，明确计税基础后续将切换为新保险合同会计准则下的会计利润。受该政策影响，各家头部险企两年间实际所得税税率出现较为明显的波动。其中太平人寿出现税后净利润高于税前利润的特殊现象，应该主要源于准则切换时点，一次性确认历史可抵扣亏损对应的递延所得税资产，带来的所得税费用抵减效应。',
+    '在剔除税务因素对当期利润的扰动后，再观察税前利润，可拆分为保险业务业绩与投资业务业绩两大板块，分别衡量承保经营与投资运营的贡献。'
+  ].join('\n\n');
+  const EX_BANK = [
+    '（银保系正文待您撰写——以下仅演示图文联动机制，请以实际分析替换正文。）',
+    '对银行系公司而言，税前利润与净利润的差额主要来自所得税费用与少数股东损益。准则转换企业所得税处理公告落地后，各家两年间实际所得税税率亦出现波动。在利润维度，我们同样对比税前利润、税率及净利润表现；进一步把税前利润拆分为保险服务业绩与投资服务业绩两大板块观察。'
+  ].join('\n\n');
+
+  /* ---- 初始化 ---- */
+  function initDelayed() {
+    if (!document.getElementById('rn2Ta')) { setTimeout(initDelayed, 120); return; }
+    initUI();
+    // 首载：无草稿则填入默认报告（默认报告含图位标记，打开即演示图文联动）
+    setTimeout(function () {
+      try {
+        if (!el.ta) return;
+        let draft = '';
+        try { draft = localStorage.getItem('rn2draft'); } catch (e) {}
+        if (!draft || draft.length < 20) {
+          el.ta.value = (window.REPORT_DEFAULT && window.REPORT_DEFAULT.length > 20) ? window.REPORT_DEFAULT : EX_HEAD;
+        } else {
+          el.ta.value = draft;
+        }
+        refresh();
+      } catch (e) {}
+    }, 60);
+  }
+  initDelayed();
+
+  window.RN2 = { refresh: refresh };
+})();
+
 </script>
 </body>
 </html>
