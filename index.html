@@ -246,6 +246,89 @@ body {
 .nav-toggle:hover { color: var(--sidebar-text); background: var(--sidebar-hover); }
 .nav-group.open .nav-toggle { transform: rotate(90deg); color: var(--c-gold); }
 
+/* ===== Sidebar Footer (Team Logo + Logout) ===== */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 18px 20px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-footer .team-logo {
+  width: 140px;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  background: #fff;
+  padding: 6px;
+  object-fit: contain;
+}
+.sidebar-footer .logout-btn {
+  color: var(--sidebar-text-muted);
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sidebar-footer .logout-btn:hover { color: #fff; border-color: var(--c-gold); }
+
+/* ===== Login Overlay ===== */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 41, 59, 0.92);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+.login-overlay.hidden { opacity: 0; pointer-events: none; }
+.login-box {
+  width: 360px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+}
+.login-box h3 { margin-bottom: 6px; font-size: 18px; color: var(--c-text-primary); font-weight: 700; }
+.login-box p { color: var(--c-text-secondary); font-size: 13px; margin-bottom: 20px; }
+.login-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  outline: none;
+}
+.login-input:focus { border-color: var(--c-navy); box-shadow: 0 0 0 2px var(--c-navy-light); }
+.login-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--c-navy);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.login-btn:hover { background: var(--c-navy-dark); }
+.login-error {
+  color: var(--c-up);
+  font-size: 12px;
+  margin-top: 8px;
+  min-height: 18px;
+}
+
 /* ===== Main Area ===== */
 .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
@@ -1279,7 +1362,7 @@ body {
 @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
   .sidebar { width: 64px; }
-  .sidebar-brand .sub, .nav-item span, .nav-sub, .nav-toggle { display: none; }
+  .sidebar-brand .sub, .nav-item span, .nav-sub, .nav-toggle, .sidebar-footer { display: none; }
   .company-popover { width: 90vw; }
 }
 </style>
@@ -1348,6 +1431,10 @@ body {
         <span class="badge">待开发</span>
       </div>
     </nav>
+    <div class="sidebar-footer">
+      <img src="assets/logo.png" alt="六条人" class="team-logo" id="teamLogo">
+      <button class="logout-btn" id="btnLogout" title="退出登录"><i class="fa-solid fa-right-from-bracket"></i> 退出登录</button>
+    </div>
   </aside>
 
   <!-- Main Area -->
@@ -5603,8 +5690,45 @@ function initExportButtons() {
   document.querySelectorAll('.export-menu').forEach(m => m.addEventListener('click', e => e.stopPropagation()));
 }
 
+// ===== Login =====
+function initLogin() {
+  const overlay = document.getElementById('loginOverlay');
+  const input = document.getElementById('loginInput');
+  const btn = document.getElementById('loginBtn');
+  const error = document.getElementById('loginError');
+  const logout = document.getElementById('btnLogout');
+  const DEFAULT_PASS = 'liutiaoren2026';
+  const KEY = 'arb_logged_in';
+
+  function doLogin() {
+    if (input.value === DEFAULT_PASS) {
+      localStorage.setItem(KEY, '1');
+      overlay.classList.add('hidden');
+      error.textContent = '';
+    } else {
+      error.textContent = '密码错误，请重新输入';
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  if (localStorage.getItem(KEY) === '1') {
+    overlay.classList.add('hidden');
+  }
+
+  btn.addEventListener('click', doLogin);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  if (logout) {
+    logout.addEventListener('click', () => {
+      localStorage.removeItem(KEY);
+      location.reload();
+    });
+  }
+}
+
 // ============== Init ==============
 document.addEventListener('DOMContentLoaded', () => {
+  initLogin();
   refreshThemeColors();
   initDropdowns();
   initTheme();
@@ -6108,5 +6232,16 @@ window.askReportKB = function (q) {
 })();
 
 </script>
+<!-- Login Overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h3>六条人 · 年报工作台</h3>
+    <p>请输入访问密码</p>
+    <input type="password" class="login-input" id="loginInput" placeholder="密码" autocomplete="off">
+    <button class="login-btn" id="loginBtn">进入工作台</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
 </body>
 </html>
