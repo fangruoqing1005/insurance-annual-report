@@ -246,24 +246,15 @@ body {
 .nav-toggle:hover { color: var(--sidebar-text); background: var(--sidebar-hover); }
 .nav-group.open .nav-toggle { transform: rotate(90deg); color: var(--c-gold); }
 
-/* ===== Sidebar Footer (Team Logo + Logout) ===== */
+/* ===== Sidebar Footer (Logout) ===== */
 .sidebar-footer {
   margin-top: auto;
-  padding: 18px 20px 20px;
+  padding: 14px 20px 16px;
   border-top: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-}
-.sidebar-footer .team-logo {
-  width: 140px;
-  height: auto;
-  display: block;
-  border-radius: 4px;
-  background: #fff;
-  padding: 6px;
-  object-fit: contain;
+  gap: 8px;
 }
 .sidebar-footer .logout-btn {
   color: var(--sidebar-text-muted);
@@ -276,6 +267,14 @@ body {
   transition: all 0.15s;
 }
 .sidebar-footer .logout-btn:hover { color: #fff; border-color: var(--c-gold); }
+
+/* ===== Header Team Logo ===== */
+.header-logo {
+  height: 44px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
 
 /* ===== Login Overlay ===== */
 .login-overlay {
@@ -1363,6 +1362,7 @@ body {
 @media (max-width: 768px) {
   .sidebar { width: 64px; }
   .sidebar-brand .sub, .nav-item span, .nav-sub, .nav-toggle, .sidebar-footer { display: none; }
+  .header-logo { height: 30px; }
   .company-popover { width: 90vw; }
 }
 </style>
@@ -1432,7 +1432,6 @@ body {
       </div>
     </nav>
     <div class="sidebar-footer">
-      <img src="assets/logo.png" alt="六条人" class="team-logo" id="teamLogo">
       <button class="logout-btn" id="btnLogout" title="退出登录"><i class="fa-solid fa-right-from-bracket"></i> 退出登录</button>
     </div>
   </aside>
@@ -1447,6 +1446,7 @@ body {
         <div class="subtitle">基于新会计准则（IFRS 17）· 寿险业</div>
       </div>
       <div class="header-right">
+        <img src="assets/logo.png" alt="六条人" class="header-logo" id="teamLogo">
         <div class="theme-switcher">
           <button class="theme-trigger" id="themeTrigger">
             <i class="fa-solid fa-palette"></i>
