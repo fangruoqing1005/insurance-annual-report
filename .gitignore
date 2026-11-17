@@ -11,3 +11,6 @@ test_*.pdf
 *_test.pdf
 scripts/test_iachina*.js
 scripts/db_v4_*.txt
+
+# 模块整合工作目录（一次性提取分块，不随仓库发布）
+_integrate_tmp/
